@@ -1,5 +1,5 @@
 /*
- * can.h - automotive CAN driver shell
+ * can.h - automotive CAN driver
  */
 
 #ifndef _BLOOD_CAN_H
@@ -27,5 +27,7 @@ void can_init(u32 baud);
 can_err_t can_send(const can_frame_t* frame);
 can_err_t can_recv(can_frame_t* frame);
 void can_set_filter(u32 id, u32 mask);
+u8 can_tx_mailbox_free(void);
+void can_irq_handler(void);
 
 #endif

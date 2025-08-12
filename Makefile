@@ -14,7 +14,7 @@ OBJCOPY_arm := $(CROSS_arm)objcopy
 
 QEMU := qemu-system-i386
 
-# Flags - KISS, no bloat
+# Flags - kiss, no bloat
 CFLAGS_x86 := -m32 -ffreestanding -nostdlib -nostartfiles \
               -Wall -Wextra -O2 -g -std=c99 \
               -Iinclude -Iarch/x86 \
@@ -26,7 +26,7 @@ CFLAGS_arm := -mcpu=cortex-m4 -mthumb -ffreestanding -nostdlib \
               -D__arm__
 
 # Build targets
-.PHONY: all x86 arm clean qemu
+.PHONY: all x86 arm clean qemu task
 
 all: x86
 
@@ -34,11 +34,14 @@ x86: build/kernel_x86.elf
 
 arm: build/kernel_arm.elf
 
+task: build/user_task.bin
+
 build/kernel_x86.elf: arch/x86/boot.o arch/x86/context_switch.o \
                       src/kernel/main.o src/kernel/uart.o src/kernel/mem.o \
                       src/kernel/sched.o src/kernel/timer.o src/kernel/gpio.o \
                       src/kernel/spinlock.o src/kernel/msg.o src/kernel/can.o \
-                      src/kernel/mpu.o src/kernel/elf.o src/kernel/string.o
+                      src/kernel/mpu.o src/kernel/elf.o src/kernel/string.o \
+                      src/kernel/wdog.o src/kernel/kprintf.o
 	@mkdir -p build
 	$(LD_x86) -T arch/x86/linker.ld -o $@ $^
 
@@ -46,9 +49,16 @@ build/kernel_arm.elf: arch/arm/cortex-m/startup.o arch/arm/cortex-m/context_swit
                       src/kernel/main.o src/kernel/uart.o src/kernel/mem.o \
                       src/kernel/sched.o src/kernel/timer.o src/kernel/gpio.o \
                       src/kernel/spinlock.o src/kernel/msg.o src/kernel/can.o \
-                      src/kernel/mpu.o src/kernel/elf.o src/kernel/string.o
+                      src/kernel/mpu.o src/kernel/elf.o src/kernel/string.o \
+                      src/kernel/wdog.o src/kernel/kprintf.o
 	@mkdir -p build
 	$(LD_arm) -T arch/arm/cortex-m/linker.ld -o $@ $^
+
+build/user_task.bin: tasks/user_task.c tasks/task.ld
+	@mkdir -p build
+	$(CC_arm) -mcpu=cortex-m4 -mthumb -ffreestanding -nostdlib \
+	          -Wl,-T,tasks/task.ld -Wl,-e,task_main -O2 -g -o build/user_task.elf $<
+	$(OBJCOPY) -O binary build/user_task.elf $@
 
 # Object files
 arch/x86/boot.o: arch/x86/boot.S
