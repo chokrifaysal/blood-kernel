@@ -1,5 +1,11 @@
 # BLOOD_KERNEL v1.2 – multi-arch
 
+# PIC32MZ build added
+ifeq ($(ARCH),pic32mz)
+    CROSS := mips-mti-elf-
+    LD_SCRIPT := arch/pic32mz/linker.ld
+    CFLAGS += -D__mips__ -march=mips32r5 -mabi=32
+endif
 # ESP32-S3 RISC-V build
 ifeq ($(ARCH),esp32s3)
     CROSS := riscv64-unknown-elf-
