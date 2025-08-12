@@ -1,5 +1,11 @@
 # BLOOD_KERNEL v1.2 – multi-arch
 
+# RP2040 build added
+ifeq ($(ARCH),rp2040)
+    CROSS := arm-none-eabi-
+    LD_SCRIPT := arch/rp2040/linker.ld
+    CFLAGS += -D__arm__ -mcpu=cortex-m0plus
+endif
 ifeq ($(ARCH),rpi4)
     CROSS := aarch64-linux-gnu-
     LD_SCRIPT := arch/rpi4/linker.ld

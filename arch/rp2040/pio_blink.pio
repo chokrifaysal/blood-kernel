@@ -1,0 +1,14 @@
+;
+; PIO state-machine blink @ 1 Hz
+; assembled by pioasm
+;
+.program blink
+    set pins, 1   [31]
+    set pins, 0   [31]
+.wrap
+
+; C glue
+static const u16 blink_prog[] = {
+    0xE081,  // set pins, 1 [31]
+    0xE000,  // set pins, 0 [31]
+};

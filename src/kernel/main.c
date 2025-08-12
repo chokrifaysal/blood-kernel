@@ -1,32 +1,22 @@
 /*
- * kernel_main – now supports RPi4
+ * kernel_main – RP2040 demo
  */
 
 #include "kernel/types.h"
-#include "uart.h"
 #include "kernel/sched.h"
 #include "kernel/timer.h"
-#include "kernel/gpio.h"
-#include "kernel/can.h"
-#include "kernel/wdog.h"
+#include "arch/rp2040/uart0.h"
+#include "arch/rp2040/gpio_sio.h"
+#include "arch/rp2040/pio_driver.h"
 
-#ifdef __aarch64__
-#include "arch/rpi4/gicv2.h"
-#include "arch/rpi4/pcie_stub.h"
-#endif
-
-void kernel_main(u32 magic, u32 addr) {
+void kernel_main(void) {
     uart_early_init();
-    kprintf("BLOOD_KERNEL v1.2 – RPi4 boot\r\n");
-
-#ifdef __aarch64__
-    gic_init();
-    kprintf("GICv2 up\r\n");
-    kprintf("PCIe VID=0x%x\r\n", pcie_read(0,0,0,0));
-#endif
-
+    kprintf("RP2040 blood_kernel v1.3\r\n");
+    
+    gpio_set_dir(25, 1);          // onboard LED
+    pio_load_blink(25);           // PIO blink
+    
     sched_init();
-    timer_init();
     task_create(idle_task, 0, 256);
     sched_start();
 }
