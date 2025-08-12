@@ -1,30 +1,32 @@
 /*
- * kernel_main – v1.1 with safety tests
+ * kernel_main – now supports RPi4
  */
 
 #include "kernel/types.h"
-#include "kernel/uart.h"
+#include "uart.h"
 #include "kernel/sched.h"
 #include "kernel/timer.h"
+#include "kernel/gpio.h"
 #include "kernel/can.h"
 #include "kernel/wdog.h"
-#include "kernel/kprintf.h"
-#include "kernel/isotp.h"
-#include "kernel/flash.h"
 
-extern void safety_test_task(void);
+#ifdef __aarch64__
+#include "arch/rpi4/gicv2.h"
+#include "arch/rpi4/pcie_stub.h"
+#endif
 
 void kernel_main(u32 magic, u32 addr) {
-    kprintf("BLOOD_KERNEL v1.1 safety release\r\n");
-    
+    uart_early_init();
+    kprintf("BLOOD_KERNEL v1.2 – RPi4 boot\r\n");
+
+#ifdef __aarch64__
+    gic_init();
+    kprintf("GICv2 up\r\n");
+    kprintf("PCIe VID=0x%x\r\n", pcie_read(0,0,0,0));
+#endif
+
     sched_init();
     timer_init();
-    can_init(500000);
-    wdog_init(2000);
-    isotp_init();
-    
     task_create(idle_task, 0, 256);
-    task_create(safety_test_task, 0, 512);
-    
     sched_start();
 }
