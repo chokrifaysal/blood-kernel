@@ -14,7 +14,7 @@ OBJCOPY_arm := $(CROSS_arm)objcopy
 
 QEMU := qemu-system-i386
 
-# Flags - kiss, no bloat
+# Flags - KISS, no bloat
 CFLAGS_x86 := -m32 -ffreestanding -nostdlib -nostartfiles \
               -Wall -Wextra -O2 -g -std=c99 \
               -Iinclude -Iarch/x86 \
@@ -50,7 +50,8 @@ build/kernel_arm.elf: arch/arm/cortex-m/startup.o arch/arm/cortex-m/context_swit
                       src/kernel/sched.o src/kernel/timer.o src/kernel/gpio.o \
                       src/kernel/spinlock.o src/kernel/msg.o src/kernel/can.o \
                       src/kernel/mpu.o src/kernel/elf.o src/kernel/string.o \
-                      src/kernel/wdog.o src/kernel/kprintf.o
+                      src/kernel/wdog.o src/kernel/kprintf.o \
+                      src/kernel/spi.o src/kernel/sd.o src/kernel/log.o
 	@mkdir -p build
 	$(LD_arm) -T arch/arm/cortex-m/linker.ld -o $@ $^
 
