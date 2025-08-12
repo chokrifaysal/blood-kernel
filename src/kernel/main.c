@@ -1,5 +1,5 @@
 /*
- * kernel_main - full automotive stack
+ * kernel_main - final automotive release
  */
 
 #include "kernel/types.h"
@@ -15,19 +15,27 @@
 #include "kernel/elf.h"
 #include "kernel/wdog.h"
 #include "kernel/kprintf.h"
+#include "kernel/spi.h"
 #include "kernel/sd.h"
 #include "kernel/log.h"
 
+static const char banner[] =
+    "BLOOD_KERNEL v1.0 2025-08-13 Automotive SIL-2\r\n";
+
 void kernel_main(u32 magic, u32 addr) {
     uart_early_init();
-    kprintf("\r\nBLOOD_KERNEL v0.9 booted\r\n");
+    kprintf("%s", banner);
     
-    if (magic == 0x2BADB002) {
-        detect_memory_x86(addr);
-    } else {
-        detect_memory_arm();
-    }
+    // board detection
+#if defined(__TI_TMS570__)
+    kprintf("Board: TMS570LS3137\r\n");
+#elif defined(__arm__)
+    kprintf("Board: STM32F407\r\n");
+#else
+    kprintf("Board: x86 QEMU\r\n");
+#endif
     
+    // bootstrap
     sched_init();
     timer_init();
     gpio_init();
@@ -40,18 +48,26 @@ void kernel_main(u32 magic, u32 addr) {
     mpu_init();
 #endif
     
+    // load safety task
+    u32 entry;
+    if (elf_load((const u8*)0x08080000, &entry)) {
+        task_create((task_entry_t)entry, 0, 1024);
+    }
+    
     task_create(idle_task, 0, 256);
     task_create(blink_task, 0, 256);
     task_create(can_task, 0, 512);
     task_create(logger_task, 0, 512);
+    task_create(safety_task, 0, 512);
     
-    kprintf("All drivers up\r\n");
+    kprintf("All systems nominal, starting scheduler\r\n");
     sched_start();
 }
 
 void idle_task(void) {
     while (1) {
         wdog_refresh();
+        task_yield();
     }
 }
 
@@ -78,6 +94,18 @@ void logger_task(void) {
         if (can_recv(&rx) == 0) {
             log_can(&rx);
         }
+        timer_delay(50);
+    }
+}
+
+void safety_task(void) {
+    u32 can_rx_last = timer_ticks();
+    while (1) {
+        if (timer_ticks() - can_rx_last > 200) {
+            kprintf("CAN RX timeout, rebooting\r\n");
+            wdog_force_reset();
+        }
+        can_rx_last = timer_ticks();
         timer_delay(100);
     }
 }

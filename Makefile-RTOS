@@ -1,0 +1,44 @@
+# BLOOD_KERNEL v1.0 – final release
+BOARD ?= stm32
+
+ifeq ($(BOARD),tms570)
+    CROSS := arm-none-eabi-
+    LD_SCRIPT := arch/tms570/linker.ld
+    CFLAGS += -D__TI_TMS570__
+else
+    CROSS := arm-none-eabi-
+    LD_SCRIPT := arch/arm/cortex-m/linker.ld
+    CFLAGS += -D__arm__
+endif
+
+CC := $(CROSS)gcc
+LD := $(CROSS)ld
+OBJCOPY := $(CROSS)objcopy
+QEMU := qemu-system-i386
+
+CFLAGS := -mthumb -mcpu=cortex-m4 -ffreestanding -nostdlib -nostartfiles \
+          -Wall -Wextra -Werror -std=c11 -O2 -g -Iinclude
+
+KERNEL_OBJS := $(patsubst src/%.c,build/%.o,$(wildcard src/kernel/*.c)) \
+               $(patsubst arch/%.S,build/%.o,$(wildcard arch/*/*.S))
+
+.PHONY: all clean misra
+all: build/kernel.elf
+
+build/%.o: src/%.c
+	@mkdir -p $(dir $@)
+	$(CC) $(CFLAGS) -c $< -o $@
+
+build/%.o: arch/%.S
+	@mkdir -p $(dir $@)
+	$(CC) $(CFLAGS) -c $< -o $@
+
+build/kernel.elf: $(KERNEL_OBJS)
+	$(LD) -T $(LD_SCRIPT) -o $@ $^
+
+misra:
+	./tools/misra_check.sh
+
+clean:
+	rm -rf build
+
