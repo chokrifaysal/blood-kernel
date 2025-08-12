@@ -40,4 +40,12 @@ SECTIONS
         *(COMMON)
         _ebss = .;
     } > RAM
+    
+    .stack ORIGIN(RAM) + LENGTH(RAM) - 0x400 : {
+        *(.stack)
+    } > RAM
+    
+    .task_stacks : {
+        *(.task_stacks)
+    } > RAM
 }

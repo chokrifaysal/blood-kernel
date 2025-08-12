@@ -7,12 +7,14 @@
 #include "kernel/uart.h"
 #include "kernel/mem.h"
 #include "kernel/sched.h"
+#include "kernel/timer.h"
+#include "kernel/gpio.h"
 
 void kernel_main(u32 magic, u32 addr) {
     uart_early_init();          // fire up UART0
     
     uart_puts("\r\n");
-    uart_puts("BLOOD_KERNEL v0.3 - booted\r\n");
+    uart_puts("BLOOD_KERNEL v0.4 - booted\r\n");
     
     // detect and report RAM
     if (magic == 0x2BADB002) {
@@ -22,12 +24,13 @@ void kernel_main(u32 magic, u32 addr) {
     }
     
     sched_init();               // bring up scheduler
+    timer_init();               // start 1 ms ticks
+    gpio_init();                // init GPIO ports
     
-    // create idle task
+    // create tasks
     task_create(idle_task, 0, 256);
-    
-    // create test task
     task_create(test_task, 0, 256);
+    task_create(blink_task, 0, 256);
     
     uart_puts("Starting scheduler...\r\n");
     sched_start();              // never returns
@@ -44,8 +47,20 @@ void idle_task(void) {
 }
 
 void test_task(void) {
+    u32 cnt = 0;
     while (1) {
-        uart_puts("task A\r\n");
-        for (volatile int i = 0; i < 1000000; i++);
+        uart_puts("tick ");
+        uart_hex(cnt++);
+        uart_puts("\r\n");
+        task_yield();
+    }
+}
+
+void blink_task(void) {
+    gpio_set_mode(PA5, GPIO_OUT);   // LED pin
+    
+    while (1) {
+        gpio_toggle(PA5);
+        timer_delay(500);           // 500 ms
     }
 }

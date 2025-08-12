@@ -1,5 +1,5 @@
 /*
- * sched.c - round-robin scheduler, static TCB pool
+ * sched.c - round-robin scheduler with timer preemption
  */
 
 #include "kernel/sched.h"
@@ -25,19 +25,29 @@ u32 task_create(task_entry_t entry, void* arg, u32 stack_size) {
         if (task_pool[i].state == 0) {
             task_pool[i].pid = next_pid++;
             task_pool[i].stack_size = stack_size;
-            task_pool[i].stack_base = 0x2001C000 - (i * (stack_size + 64));  // rough placement
+            
+#ifdef __arm__
+            // ARM: stack grows down from RAM top
+            task_pool[i].stack_base = 0x2001C000 - (i * (stack_size + 64));
+#else
+            // x86: give each task 1k stack in low mem
+            task_pool[i].stack_base = 0x8000 + (i * 0x400);
+#endif
+            
             task_pool[i].sp = (u32*)(task_pool[i].stack_base + stack_size - 32);
             
             // initialize stack frame
             u32* sp = task_pool[i].sp;
-            sp[0] = 0x01000000;      // xPSR (thumb bit)
+#ifdef __arm__
+            sp[0] = 0x01000000;      // xPSR
             sp[1] = (u32)entry;      // PC
-            sp[2] = 0xFFFFFFFD;      // LR (exit)
-            sp[3] = 0;               // R12
-            sp[4] = 0;               // R3
-            sp[5] = 0;               // R2
-            sp[6] = 0;               // R1
-            sp[7] = (u32)arg;        // R0
+            sp[2] = 0xFFFFFFFD;      // LR
+#endif
+            
+#ifdef __x86_64__
+            // x86 stack frame
+            sp[0] = (u32)entry;      // return address
+#endif
             
             task_pool[i].state = 0;   // ready
             return task_pool[i].pid;
@@ -66,16 +76,20 @@ void sched_start(void) {
 void task_yield(void) {
     // find next ready task
     struct task* next = current_task;
-    do {
-        next++;
-        if (next >= &task_pool[MAX_TASKS])
-            next = &task_pool[0];
-    } while (next->state != 0 && next != current_task);
+    u32 start = (current_task) ? (current_task - task_pool) : 0;
+    
+    for (u32 i = 1; i <= MAX_TASKS; i++) {
+        u32 idx = (start + i) % MAX_TASKS;
+        if (task_pool[idx].state == 0 && task_pool[idx].pid != 0) {
+            next = &task_pool[idx];
+            break;
+        }
+    }
     
     if (next != current_task) {
         struct task* old = current_task;
         current_task = next;
-        old->state = 0;
+        if (old) old->state = 0;
         next->state = 1;
         context_switch(&old->sp, next->sp);
     }

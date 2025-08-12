@@ -1,4 +1,4 @@
-/* x86 linker script */
+/* x86 linker script - simple, no fancy shit */
 ENTRY(_start)
 
 SECTIONS
@@ -21,5 +21,10 @@ SECTIONS
     .bss ALIGN(4K) : {
         *(COMMON)
         *(.bss)
+    }
+    
+    . = 0x8000;    /* task stacks */
+    .task_stacks : {
+        *(.task_stacks)
     }
 }
