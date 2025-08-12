@@ -9,7 +9,6 @@ vectors:
     .word reset_handler
     .word nmi_handler
     .word hardfault_handler
-    @ ... more vectors as needed
 
 .section .text
 .type reset_handler, %function
@@ -21,7 +20,7 @@ reset_handler:
     
 hang:
     b hang
-.size reset_handler, . - reset_handler
+.size reset_handler, . - _start
 
 .type nmi_handler, %function
 nmi_handler:

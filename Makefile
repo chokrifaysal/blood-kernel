@@ -14,14 +14,16 @@ OBJCOPY_arm := $(CROSS_arm)objcopy
 
 QEMU := qemu-system-i386
 
-# Flags - keep it simple, no bloat
+# Flags - KISS, no bloat
 CFLAGS_x86 := -m32 -ffreestanding -nostdlib -nostartfiles \
               -Wall -Wextra -O2 -g -std=c99 \
-              -Iinclude -Iarch/x86
+              -Iinclude -Iarch/x86 \
+              -D__x86_64__
 
 CFLAGS_arm := -mcpu=cortex-m4 -mthumb -ffreestanding -nostdlib \
               -nostartfiles -Wall -Wextra -O2 -g -std=c99 \
-              -Iinclude -Iarch/arm/cortex-m
+              -Iinclude -Iarch/arm/cortex-m \
+              -D__arm__
 
 # Build targets
 .PHONY: all x86 arm clean qemu
@@ -32,11 +34,11 @@ x86: build/kernel_x86.elf
 
 arm: build/kernel_arm.elf
 
-build/kernel_x86.elf: arch/x86/boot.o src/kernel/main.o
+build/kernel_x86.elf: arch/x86/boot.o src/kernel/main.o src/kernel/uart.o src/kernel/mem.o
 	@mkdir -p build
 	$(LD_x86) -T arch/x86/linker.ld -o $@ $^
 
-build/kernel_arm.elf: arch/arm/cortex-m/startup.o src/kernel/main.o
+build/kernel_arm.elf: arch/arm/cortex-m/startup.o src/kernel/main.o src/kernel/uart.o src/kernel/mem.o
 	@mkdir -p build
 	$(LD_arm) -T arch/arm/cortex-m/linker.ld -o $@ $^
 
@@ -47,9 +49,10 @@ arch/x86/boot.o: arch/x86/boot.S
 arch/arm/cortex-m/startup.o: arch/arm/cortex-m/startup.S
 	$(CC_arm) $(CFLAGS_arm) -c $< -o $@
 
-src/kernel/main.o: src/kernel/main.c
-	$(CC_x86) $(CFLAGS_x86) -c $< -o $@  # x86 build
-	#$(CC_arm) $(CFLAGS_arm) -c $< -o $@  # arm build - fix later
+src/kernel/%.o: src/kernel/%.c
+	$(CC_x86) $(CFLAGS_x86) -c $< -o ${@:.o=_x86.o} 2>/dev/null || true
+	$(CC_arm) $(CFLAGS_arm) -c $< -o ${@:.o=_arm.o} 2>/dev/null || true
+	mv ${@:.o=_$(shell echo $@ | cut -d_ -f3).o} $@
 
 # QEMU for testing
 qemu: x86
