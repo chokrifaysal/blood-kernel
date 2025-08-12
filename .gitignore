@@ -1,0 +1,28 @@
+# Build artifacts
+*.o
+*.a
+*.elf
+*.bin
+*.img
+*.map
+*.d
+*.su
+
+# Debug stuff
+*.gdb
+*.log
+tags
+cscope.*
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Project log (private)
+project_log.md
+
+# Toolchain
+toolchain/
