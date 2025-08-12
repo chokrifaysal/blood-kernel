@@ -9,6 +9,33 @@ vectors:
     .word reset_handler
     .word nmi_handler
     .word hardfault_handler
+    .word 0                 # reserved
+    .word 0                 # reserved
+    .word 0                 # reserved
+    .word 0                 # reserved
+    .word 0                 # reserved
+    .word 0                 # reserved
+    .word 0                 # reserved
+    .word 0                 # reserved
+    .word 0                 # reserved
+    .word 0                 # reserved
+    .word 0                 # reserved
+    .word 0                 # reserved
+    .word 0                 # reserved
+    .word 0                 # reserved
+    .word 0                 # reserved
+    .word 0                 # reserved
+    .word 0                 # reserved
+    .word 0                 # reserved
+    .word 0                 # reserved
+    .word 0                 # reserved
+    .word 0                 # reserved
+    .word 0                 # reserved
+    .word 0                 # reserved
+    .word 0                 # reserved
+    .word 0                 # reserved
+    .word 0                 # reserved
+    .word 0                 # reserved
 
 .section .text
 .type reset_handler, %function
@@ -20,7 +47,7 @@ reset_handler:
     
 hang:
     b hang
-.size reset_handler, . - _start
+.size reset_handler, . - reset_handler
 
 .type nmi_handler, %function
 nmi_handler:

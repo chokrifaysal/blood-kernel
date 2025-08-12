@@ -34,11 +34,15 @@ x86: build/kernel_x86.elf
 
 arm: build/kernel_arm.elf
 
-build/kernel_x86.elf: arch/x86/boot.o src/kernel/main.o src/kernel/uart.o src/kernel/mem.o
+build/kernel_x86.elf: arch/x86/boot.o arch/x86/context_switch.o \
+                      src/kernel/main.o src/kernel/uart.o src/kernel/mem.o \
+                      src/kernel/sched.o
 	@mkdir -p build
 	$(LD_x86) -T arch/x86/linker.ld -o $@ $^
 
-build/kernel_arm.elf: arch/arm/cortex-m/startup.o src/kernel/main.o src/kernel/uart.o src/kernel/mem.o
+build/kernel_arm.elf: arch/arm/cortex-m/startup.o arch/arm/cortex-m/context_switch.o \
+                      src/kernel/main.o src/kernel/uart.o src/kernel/mem.o \
+                      src/kernel/sched.o
 	@mkdir -p build
 	$(LD_arm) -T arch/arm/cortex-m/linker.ld -o $@ $^
 
@@ -46,7 +50,13 @@ build/kernel_arm.elf: arch/arm/cortex-m/startup.o src/kernel/main.o src/kernel/u
 arch/x86/boot.o: arch/x86/boot.S
 	$(CC_x86) $(CFLAGS_x86) -c $< -o $@
 
+arch/x86/context_switch.o: arch/x86/context_switch.S
+	$(CC_x86) $(CFLAGS_x86) -c $< -o $@
+
 arch/arm/cortex-m/startup.o: arch/arm/cortex-m/startup.S
+	$(CC_arm) $(CFLAGS_arm) -c $< -o $@
+
+arch/arm/cortex-m/context_switch.o: arch/arm/cortex-m/context_switch.S
 	$(CC_arm) $(CFLAGS_arm) -c $< -o $@
 
 src/kernel/%.o: src/kernel/%.c
