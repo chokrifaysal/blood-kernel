@@ -1,12 +1,14 @@
 /*
- * timer.c - 1 ms tick source
+ * timer.c - 1 ms tick source with critical sections
  */
 
 #include "kernel/timer.h"
 #include "kernel/types.h"
+#include "kernel/spinlock.h"
 #include "uart.h"
 
 static volatile u32 system_ticks = 0;
+static spinlock_t tick_lock = {0};
 
 #ifdef __x86_64__
 #define PIT_CH0  0x40
@@ -14,10 +16,9 @@ static volatile u32 system_ticks = 0;
 #define PIT_FREQ 1193182
 
 static void pit_init(void) {
-    // set PIT channel 0 to 1 kHz
     u32 divisor = PIT_FREQ / 1000;
     
-    outb(PIT_CMD, 0x36);        // channel 0, lobyte/hibyte, rate gen
+    outb(PIT_CMD, 0x36);
     outb(PIT_CH0, divisor & 0xFF);
     outb(PIT_CH0, divisor >> 8);
 }
@@ -38,12 +39,16 @@ void timer_init(void) {
 }
 
 u32 timer_ticks(void) {
-    return system_ticks;
+    u32 ticks;
+    spin_lock(&tick_lock);
+    ticks = system_ticks;
+    spin_unlock(&tick_lock);
+    return ticks;
 }
 
 void timer_delay(u32 ms) {
-    u32 end = system_ticks + ms;
-    while (system_ticks < end);
+    u32 end = timer_ticks() + ms;
+    while (timer_ticks() < end);
 }
 
 #elif defined(__arm__)
@@ -51,32 +56,32 @@ void timer_delay(u32 ms) {
 #define SYSTICK_CTRL   (*(volatile u32*)(SYSTICK_BASE + 0x00))
 #define SYSTICK_LOAD   (*(volatile u32*)(SYSTICK_BASE + 0x04))
 #define SYSTICK_VAL    (*(volatile u32*)(SYSTICK_BASE + 0x08))
-#define SYSTICK_CALIB  (*(volatile u32*)(SYSTICK_BASE + 0x0C))
 
 void timer_init(void) {
-    // 84 MHz / 8 = 10.5 MHz -> reload 10500 for 1 kHz
     SYSTICK_LOAD = 10500 - 1;
     SYSTICK_VAL = 0;
-    SYSTICK_CTRL = (1<<0) | (1<<1) | (1<<2);  // enable, int, clk/8
+    SYSTICK_CTRL = (1<<0) | (1<<1) | (1<<2);
     
     uart_puts("SysTick timer: 1 kHz\r\n");
 }
 
 u32 timer_ticks(void) {
-    return system_ticks;
+    u32 ticks;
+    __sync_synchronize();
+    ticks = system_ticks;
+    __sync_synchronize();
+    return ticks;
 }
 
 void timer_delay(u32 ms) {
-    u32 end = system_ticks + ms;
-    while (system_ticks < end);
+    u32 end = timer_ticks() + ms;
+    while (timer_ticks() < end);
 }
 
-// SysTick ISR - keep it minimal
 void SysTick_Handler(void) {
-    system_ticks++;
+    __sync_fetch_and_add(&system_ticks, 1);
     if (system_ticks % 100 == 0) {
-        // trigger PendSV every 100 ms for preemption
-        *(volatile u32*)0xE000ED04 = (1<<28);
+        *(volatile u32*)0xE000ED04 = (1<<28);  // PendSV
     }
 }
 

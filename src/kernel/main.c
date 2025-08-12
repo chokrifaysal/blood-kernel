@@ -9,12 +9,13 @@
 #include "kernel/sched.h"
 #include "kernel/timer.h"
 #include "kernel/gpio.h"
+#include "kernel/spinlock.h"
 
 void kernel_main(u32 magic, u32 addr) {
     uart_early_init();          // fire up UART0
     
     uart_puts("\r\n");
-    uart_puts("BLOOD_KERNEL v0.4 - booted\r\n");
+    uart_puts("BLOOD_KERNEL v0.5 - booted\r\n");
     
     // detect and report RAM
     if (magic == 0x2BADB002) {
@@ -47,11 +48,15 @@ void idle_task(void) {
 }
 
 void test_task(void) {
+    static spinlock_t print_lock = {0};
     u32 cnt = 0;
+    
     while (1) {
-        uart_puts("tick ");
+        spin_lock(&print_lock);
+        uart_puts("task A: ");
         uart_hex(cnt++);
         uart_puts("\r\n");
+        spin_unlock(&print_lock);
         task_yield();
     }
 }

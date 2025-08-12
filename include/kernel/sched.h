@@ -1,5 +1,5 @@
 /*
- * sched.h - minimal round-robin scheduler
+ * sched.h - minimal round-robin scheduler with safety
  */
 
 #ifndef _BLOOD_SCHED_H
@@ -9,6 +9,7 @@
 
 #define MAX_TASKS 32
 #define KERNEL_STACK_SIZE 512
+#define STACK_CANARY 0xDEADBEEF
 
 typedef void (*task_entry_t)(void);
 
@@ -16,6 +17,7 @@ struct task {
     u32* sp;                    // current stack pointer
     u32 stack_base;             // bottom of stack
     u32 stack_size;
+    u32 canary;                 // stack overflow detection
     u8  state;                  // 0=ready, 1=running, 2=blocked
     u8  priority;
     u32 pid;
@@ -26,5 +28,6 @@ void sched_start(void);
 u32 task_create(task_entry_t entry, void* arg, u32 stack_size);
 void task_yield(void);
 void task_exit(void);
+void task_stack_check(void);
 
 #endif
