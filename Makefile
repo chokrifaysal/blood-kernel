@@ -1,5 +1,13 @@
 # BLOOD_KERNEL v1.2 – multi-arch
 
+# AVR128DA48 build
+ifeq ($(ARCH),avr128da)
+    CROSS := avr-
+    LD_SCRIPT := arch/avr128da/linker.ld
+    CFLAGS += -D__AVR_ARCH__ -mmcu=avr128da48 -Os -ffreestanding
+    OBJCOPY := $(CROSS)objcopy
+    OBJCOPY_OPT := -O ihex
+endif
 # PIC32MZ build added
 ifeq ($(ARCH),pic32mz)
     CROSS := mips-mti-elf-
