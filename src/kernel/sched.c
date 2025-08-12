@@ -1,11 +1,11 @@
 /*
- * sched.c - round-robin scheduler with canaries and spinlocks
+ * sched.c - round-robin scheduler with MPU support
  */
 
 #include "kernel/sched.h"
 #include "kernel/types.h"
 #include "kernel/spinlock.h"
-#include "common/compiler.h"
+#include "kernel/mpu.h"
 #include "uart.h"
 
 static struct task task_pool[MAX_TASKS];
@@ -41,7 +41,8 @@ u32 task_create(task_entry_t entry, void* arg, u32 stack_size) {
             task_pool[i].stack_size = stack_size;
             
 #ifdef __arm__
-            task_pool[i].stack_base = 0x2001C000 - (i * (stack_size + 64));
+            // carve out RAM for task
+            task_pool[i].stack_base = 0x20010000 + (i * 0x4000);
 #else
             task_pool[i].stack_base = 0x8000 + (i * 0x400);
 #endif
@@ -76,7 +77,7 @@ void task_stack_check(void) {
             uart_puts("Stack overflow task ");
             uart_hex(task_pool[i].pid);
             uart_puts("\r\n");
-            task_pool[i].state = 0;   // kill it
+            task_pool[i].state = 0;
         }
     }
 }
@@ -100,7 +101,6 @@ void sched_start(void) {
 
 void task_yield(void) {
     spin_lock(&sched_lock);
-    
     task_stack_check();
     
     struct task* next = current_task;

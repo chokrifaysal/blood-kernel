@@ -37,14 +37,16 @@ arm: build/kernel_arm.elf
 build/kernel_x86.elf: arch/x86/boot.o arch/x86/context_switch.o \
                       src/kernel/main.o src/kernel/uart.o src/kernel/mem.o \
                       src/kernel/sched.o src/kernel/timer.o src/kernel/gpio.o \
-                      src/kernel/spinlock.o src/kernel/msg.o src/kernel/can.o
+                      src/kernel/spinlock.o src/kernel/msg.o src/kernel/can.o \
+                      src/kernel/mpu.o src/kernel/elf.o src/kernel/string.o
 	@mkdir -p build
 	$(LD_x86) -T arch/x86/linker.ld -o $@ $^
 
 build/kernel_arm.elf: arch/arm/cortex-m/startup.o arch/arm/cortex-m/context_switch.o \
                       src/kernel/main.o src/kernel/uart.o src/kernel/mem.o \
                       src/kernel/sched.o src/kernel/timer.o src/kernel/gpio.o \
-                      src/kernel/spinlock.o src/kernel/msg.o src/kernel/can.o
+                      src/kernel/spinlock.o src/kernel/msg.o src/kernel/can.o \
+                      src/kernel/mpu.o src/kernel/elf.o src/kernel/string.o
 	@mkdir -p build
 	$(LD_arm) -T arch/arm/cortex-m/linker.ld -o $@ $^
 

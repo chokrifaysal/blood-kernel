@@ -1,5 +1,5 @@
 /*
- * kernel_main 
+ * kernel_main
  * Both x86 and ARM entry point
  */
 
@@ -12,14 +12,29 @@
 #include "kernel/spinlock.h"
 #include "kernel/msg.h"
 #include "kernel/can.h"
+#include "kernel/mpu.h"
+#include "kernel/elf.h"
 
-static msg_queue_t uart_rx_q;
+// tiny demo task in flash
+static const u8 demo_elf[] = {
+    0x7F, 'E', 'L', 'F', 1, 1, 1, 0,
+    0, 0, 0, 0, 0, 0, 0, 0,
+    0x02, 0x00, 0x28, 0x00, 0x01, 0x00, 0x00, 0x00,
+    0x00, 0x10, 0x01, 0x00, 0x34, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x34, 0x00, 0x20, 0x00, 0x01, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x10, 0x01, 0x00,
+    0x00, 0x10, 0x01, 0x00, 0x05, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00,
+};
 
 void kernel_main(u32 magic, u32 addr) {
     uart_early_init();
     
     uart_puts("\r\n");
-    uart_puts("BLOOD_KERNEL v0.6 - booted\r\n");
+    uart_puts("BLOOD_KERNEL v0.7 - booted\r\n");
     
     if (magic == 0x2BADB002) {
         detect_memory_x86(addr);
@@ -31,10 +46,19 @@ void kernel_main(u32 magic, u32 addr) {
     timer_init();
     gpio_init();
     msg_init(&uart_rx_q);
-    can_init(500000);   // 500 kbit/s
+    can_init(500000);
+    
+#ifdef __arm__
+    mpu_init();   // ARM only
+#endif
+    
+    // load demo ELF task
+    u32 entry;
+    if (elf_load(demo_elf, &entry)) {
+        task_create((task_entry_t)entry, 0, 512);
+    }
     
     task_create(idle_task, 0, 256);
-    task_create(test_task, 0, 256);
     task_create(blink_task, 0, 256);
     task_create(can_task, 0, 512);
     
@@ -52,20 +76,6 @@ void idle_task(void) {
     }
 }
 
-void test_task(void) {
-    static spinlock_t print_lock = {0};
-    u32 cnt = 0;
-    
-    while (1) {
-        spin_lock(&print_lock);
-        uart_puts("tick ");
-        uart_hex(cnt++);
-        uart_puts("\r\n");
-        spin_unlock(&print_lock);
-        task_yield();
-    }
-}
-
 void blink_task(void) {
     gpio_set_mode(PA5, GPIO_OUT);
     
@@ -76,15 +86,19 @@ void blink_task(void) {
 }
 
 void can_task(void) {
-    static can_frame_t tx_frame = {
-        .id = 0x123,
-        .len = 8,
-        .data = {0xDE, 0xAD, 0xBE, 0xEF, 0xCA, 0xFE, 0xBA, 0xBE}
-    };
+    can_frame_t tx = {.id = 0x123, .len = 8, .data = {0xAA}};
     
     while (1) {
-        can_send(&tx_frame);
+        tx.data[0]++;
+        can_send(&tx);
         timer_delay(1000);
-        tx_frame.data[0]++;
+    }
+}
+
+// demo task linked at 0x10010000
+void demo_task(void) {
+    while (1) {
+        uart_puts("Hello from ELF!\r\n");
+        timer_delay(500);
     }
 }
