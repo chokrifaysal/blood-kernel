@@ -1,5 +1,11 @@
 # BLOOD_KERNEL v1.2 – multi-arch
 
+# ESP32-S3 RISC-V build
+ifeq ($(ARCH),esp32s3)
+    CROSS := riscv64-unknown-elf-
+    LD_SCRIPT := arch/esp32s3/linker.ld
+    CFLAGS += -D__riscv -march=rv32imc -mabi=ilp32
+endif
 # RP2040 build added
 ifeq ($(ARCH),rp2040)
     CROSS := arm-none-eabi-
