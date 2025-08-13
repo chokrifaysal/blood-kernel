@@ -1,5 +1,11 @@
 # BLOOD_KERNEL v1.2 – multi-arch
 
+# RA6M5 build
+ifeq ($(ARCH),ra6m5)
+    CROSS := arm-none-eabi-
+    LD_SCRIPT := arch/ra6m5/linker.ld
+    CFLAGS += -D__arm__ -mcpu=cortex-m33 -mfloat-abi=hard -mfpu=fpv5-sp-d16 -O2
+endif
 # AVR128DA48 build
 ifeq ($(ARCH),avr128da)
     CROSS := avr-

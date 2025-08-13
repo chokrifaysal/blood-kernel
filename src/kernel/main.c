@@ -1,28 +1,29 @@
 /*
- * kernel_main – AVR128DA48 demo
+ * kernel_main – RA6M5 demo
  */
 
-#ifdef __AVR_ARCH__
-#include "arch/avr128da/uart0.c"
-#include "arch/avr128da/spi_master.c"
-#include "arch/avr128da/twi_slave.c"
-#include "arch/avr128da/gpio_5v.c"
+#ifdef __arm__ && defined(__ARM_ARCH_8M_MAIN__)
+#include "arch/ra6m5/sci9_uart.c"
+#include "arch/ra6m5/eth_mac.c"
+#include "arch/ra6m5/usb_fs.c"
+#include "arch/ra6m5/trustzone.c"
 #endif
 
 void kernel_main(void) {
-#ifdef __AVR_ARCH__
+#ifdef __ARM_ARCH_8M_MAIN__
     uart_early_init();
-    kprintf("AVR128DA48 blood_kernel v1.5\r\n");
+    kprintf("RA6M5 Cortex-M33 blood_kernel v1.7\r\n");
 
-    spi_init();
-    twi_init(0x42);         // TWI slave addr 0x42
-    gpio_set_dir(7, 1);     // LED pin
-    gpio_put(7, 1);
+    tz_init();
+    kprintf("TrustZone enabled\r\n");
+
+    eth_init();
+    usb_init();
 
     sched_init();
-    task_create(idle_task, 0, 128);
-    task_create(spi_task, 0, 128);
-    task_create(twi_task, 0, 128);
+    task_create(idle_task, 0, 256);
+    task_create(eth_task, 0, 512);
+    task_create(usb_task, 0, 512);
     sched_start();
 #endif
 }
