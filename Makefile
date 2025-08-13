@@ -1,5 +1,12 @@
 # BLOOD_KERNEL v1.2 – multi-arch
 
+# RT1170 build
+ifeq ($(ARCH),rt1170)
+    CROSS := arm-none-eabi-
+    LD_SCRIPT := arch/rt1170/linker.ld
+    CFLAGS += -D__arm__ -mcpu=cortex-m7 -mfloat-abi=hard -mfpu=fpv5-d16 -O2
+endif
+
 # RA6M5 build
 ifeq ($(ARCH),ra6m5)
     CROSS := arm-none-eabi-

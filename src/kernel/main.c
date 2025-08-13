@@ -1,28 +1,29 @@
 /*
- * kernel_main – RA6M5 demo
+ * kernel_main – RT1170 1 GHz demo
  */
 
 #ifdef __arm__ && defined(__ARM_ARCH_8M_MAIN__)
-#include "arch/ra6m5/sci9_uart.c"
-#include "arch/ra6m5/eth_mac.c"
-#include "arch/ra6m5/usb_fs.c"
-#include "arch/ra6m5/trustzone.c"
+#include "arch/rt1170/clock.c"
+#include "arch/rt1170/uart_lpuart1.c"
+#include "arch/rt1170/enet_500loc.c"
+#include "arch/rt1170/sdmmc.c"
+#include "arch/rt1170/usb_hs.c"
 #endif
 
 void kernel_main(void) {
 #ifdef __ARM_ARCH_8M_MAIN__
+    clock_init();
     uart_early_init();
-    kprintf("RA6M5 Cortex-M33 blood_kernel v1.7\r\n");
+    kprintf("RT1170 M7 @1 GHz\r\n");
 
-    tz_init();
-    kprintf("TrustZone enabled\r\n");
-
-    eth_init();
-    usb_init();
+    enet_init();
+    sdmmc_init();
+    usb_hs_init();
 
     sched_init();
     task_create(idle_task, 0, 256);
-    task_create(eth_task, 0, 512);
+    task_create(enet_task, 0, 512);
+    task_create(sdmmc_task, 0, 512);
     task_create(usb_task, 0, 512);
     sched_start();
 #endif
