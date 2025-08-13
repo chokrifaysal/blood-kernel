@@ -1,5 +1,10 @@
 # BLOOD_KERNEL v1.2 – multi-arch
 
+ifeq ($(ARCH),gd32vf103)
+    CROSS := riscv64-unknown-elf-
+    LD_SCRIPT := arch/gd32vf103/linker.ld
+    CFLAGS += -D__riscv -march=rv32imc -mabi=ilp32 -O2
+endif
 # RT1170 build
 ifeq ($(ARCH),rt1170)
     CROSS := arm-none-eabi-

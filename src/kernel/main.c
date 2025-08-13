@@ -1,30 +1,30 @@
 /*
- * kernel_main – RT1170 1 GHz demo
+ * kernel_main – GD32VF103 demo
  */
 
-#ifdef __arm__ && defined(__ARM_ARCH_8M_MAIN__)
-#include "arch/rt1170/clock.c"
-#include "arch/rt1170/uart_lpuart1.c"
-#include "arch/rt1170/enet_500loc.c"
-#include "arch/rt1170/sdmmc.c"
-#include "arch/rt1170/usb_hs.c"
+#ifdef __riscv && defined(__riscv_xlen) && __riscv_xlen == 32
+#include "arch/gd32vf103/clock.c"
+#include "arch/gd32vf103/uart0.c"
+#include "arch/gd32vf103/can.c"
+#include "arch/gd32vf103/qspi.c"
+#include "arch/gd32vf103/usb_fs_500loc.c"
 #endif
 
 void kernel_main(void) {
-#ifdef __ARM_ARCH_8M_MAIN__
+#ifdef __riscv_xlen
     clock_init();
     uart_early_init();
-    kprintf("RT1170 M7 @1 GHz\r\n");
+    kprintf("GD32VF103 RISC-V @108 MHz\r\n");
 
-    enet_init();
-    sdmmc_init();
-    usb_hs_init();
+    can_init();
+    qspi_init();
+    usb_init();
 
     sched_init();
     task_create(idle_task, 0, 256);
-    task_create(enet_task, 0, 512);
-    task_create(sdmmc_task, 0, 512);
+    task_create(can_task, 0, 256);
     task_create(usb_task, 0, 512);
+    task_create(qspi_task, 0, 512);
     sched_start();
 #endif
 }
