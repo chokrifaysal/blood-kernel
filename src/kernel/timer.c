@@ -11,44 +11,27 @@ static volatile u32 system_ticks = 0;
 static spinlock_t tick_lock = {0};
 
 #ifdef __x86_64__
-#define PIT_CH0  0x40
-#define PIT_CMD  0x43
-#define PIT_FREQ 1193182
-
-static void pit_init(void) {
-    u32 divisor = PIT_FREQ / 1000;
-    
-    outb(PIT_CMD, 0x36);
-    outb(PIT_CH0, divisor & 0xFF);
-    outb(PIT_CH0, divisor >> 8);
-}
-
-static u8 inb(u16 port) {
-    u8 val;
-    __asm__ volatile("inb %1, %0" : "=a"(val) : "Nd"(port));
-    return val;
-}
-
-static void outb(u16 port, u8 val) {
-    __asm__ volatile("outb %0, %1" : : "a"(val), "Nd"(port));
-}
+/* x86 PIT timer driver */
+extern void pit_init(u32 frequency);
+extern u32 pit_get_ticks(void);
+extern void pit_delay(u32 ms);
+extern void pit_irq_handler(void);
 
 void timer_init(void) {
-    pit_init();
+    pit_init(1000);
     uart_puts("PIT timer: 1 kHz\r\n");
 }
 
 u32 timer_ticks(void) {
-    u32 ticks;
-    spin_lock(&tick_lock);
-    ticks = system_ticks;
-    spin_unlock(&tick_lock);
-    return ticks;
+    return pit_get_ticks();
 }
 
 void timer_delay(u32 ms) {
-    u32 end = timer_ticks() + ms;
-    while (timer_ticks() < end);
+    pit_delay(ms);
+}
+
+void timer_irq_handler(void) {
+    pit_irq_handler();
 }
 
 #elif defined(__arm__)
