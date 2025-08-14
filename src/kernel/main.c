@@ -1,30 +1,31 @@
 /*
- * kernel_main – GD32VF103 demo
+ * kernel_main – dual-core entry points
  */
 
-#ifdef __riscv && defined(__riscv_xlen) && __riscv_xlen == 32
-#include "arch/gd32vf103/clock.c"
-#include "arch/gd32vf103/uart0.c"
-#include "arch/gd32vf103/can.c"
-#include "arch/gd32vf103/qspi.c"
-#include "arch/gd32vf103/usb_fs_500loc.c"
+#ifdef __arm__ && defined(__ARM_ARCH_8M_MAIN__)
+#include "arch/stm32h745/clock.c"
+#include "arch/stm32h745/uart_usart3.c"
+#include "arch/stm32h745/ipc_mailbox_500loc.c"
+#include "arch/stm32h745/dual_scheduler.c"
 #endif
 
 void kernel_main(void) {
-#ifdef __riscv_xlen
+#ifdef __ARM_ARCH_8M_MAIN__
     clock_init();
     uart_early_init();
-    kprintf("GD32VF103 RISC-V @108 MHz\r\n");
+    kprintf("STM32H745 CM7 480 MHz\r\n");
+    ipc_init();
+    sched_init_m7();
+    sched_start_m7();
+#endif
+}
 
-    can_init();
-    qspi_init();
-    usb_init();
-
-    sched_init();
-    task_create(idle_task, 0, 256);
-    task_create(can_task, 0, 256);
-    task_create(usb_task, 0, 512);
-    task_create(qspi_task, 0, 512);
-    sched_start();
+void kernel_main_m4(void) {
+#ifdef __ARM_ARCH_8M_MAIN__
+    clock_init();
+    uart_early_init();
+    kprintf("STM32H745 CM4 240 MHz\r\n");
+    sched_init_m4();
+    sched_start_m4();
 #endif
 }

@@ -1,0 +1,11 @@
+/* STM32H745 CM7 – 2 MB flash, 368 kB DTCM, 128 kB ITCM */
+ENTRY(reset_handler_m7)
+
+MEMORY
+{
+    FLASH (rx) : ORIGIN = 0x08000000, LENGTH = 2M
+    DTCM  (rwx): ORIGIN = 0x20000000, LENGTH = 368K
+    ITCM  (rwx): ORIGIN = 0x00000000, LENGTH = 128K
+}
+
+_estack_m7 = ORIGIN(DTCM) + LENGTH(DTCM);

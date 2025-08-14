@@ -1,0 +1,10 @@
+/* STM32H745 CM4 – 2 MB flash, 320 kB SRAM2 */
+ENTRY(reset_handler_m4)
+
+MEMORY
+{
+    FLASH (rx) : ORIGIN = 0x08100000, LENGTH = 2M
+    SRAM2 (rwx): ORIGIN = 0x10000000, LENGTH = 320K
+}
+
+_estack_m4 = ORIGIN(SRAM2) + LENGTH(SRAM2);
