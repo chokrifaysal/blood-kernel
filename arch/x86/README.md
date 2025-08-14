@@ -7,6 +7,9 @@
 - **PIC**: 8259A Programmable Interrupt Controller with IRQ management
 - **MMU**: 4KB page-based memory management with demand paging
 - **CPUID**: CPU identification and feature detection
+- **Cache**: MTRR/PAT memory type and cache control
+- **VMX**: Intel VT-x virtualization with VMCS support
+- **PerfMon**: CPU performance counters and profiling
 - **Thermal**: CPU temperature monitoring with digital sensors
 - **Power**: P-states/C-states CPU power management
 - **IOMMU**: Intel VT-d/AMD-Vi memory translation
@@ -103,6 +106,27 @@ qemu-system-x86_64 -kernel build/kernel.bin
 - Turbo boost control
 - Clock modulation throttling
 - Energy performance bias
+
+### Cache Management
+- MTRR variable and fixed range registers
+- PAT (Page Attribute Table) support
+- Cache line flushing and invalidation
+- Memory type configuration (UC/WC/WT/WB)
+- Cache size detection and prefetch control
+
+### Virtualization Support
+- Intel VT-x (VMX) implementation
+- VMCS (Virtual Machine Control Structure)
+- EPT (Extended Page Tables) support
+- VPID (Virtual Processor ID) support
+- VM entry/exit control and monitoring
+
+### Performance Monitoring
+- Programmable performance counters
+- Fixed-function counters (instructions/cycles)
+- Event selection and filtering
+- User/kernel mode profiling
+- Global performance counter control
 
 ### IOMMU Support
 - Intel VT-d implementation

@@ -6,7 +6,7 @@
 
 const char *arch_name(void) { return "x86-32"; }
 const char *mcu_name(void)  { return "QEMU-i686"; }
-const char *boot_name(void) { return "Thermal+Power+IOMMU"; }
+const char *boot_name(void) { return "Cache+VMX+PerfMon"; }
 
 void vga_init(void);
 void ps2_kbd_init(void);
@@ -32,6 +32,9 @@ void smbios_init(void);
 void thermal_init(void);
 void power_init(void);
 void iommu_init(void);
+void cache_init(void);
+void vmx_init(void);
+void perfmon_init(void);
 void x86_pc_demo_init(void);
 
 void clock_init(void) {
@@ -56,6 +59,15 @@ void clock_init(void) {
 
     /* Initialize power management */
     power_init();
+
+    /* Initialize cache management */
+    cache_init();
+
+    /* Initialize virtualization */
+    vmx_init();
+
+    /* Initialize performance monitoring */
+    perfmon_init();
 
     /* Initialize ACPI */
     acpi_init();

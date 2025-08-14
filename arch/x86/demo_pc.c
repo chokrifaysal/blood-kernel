@@ -26,6 +26,9 @@
 #include "drivers/thermal.h"
 #include "drivers/power.h"
 #include "drivers/iommu.h"
+#include "drivers/cache.h"
+#include "drivers/vmx.h"
+#include "drivers/perfmon.h"
 
 extern void timer_delay(u32 ms);
 
@@ -46,6 +49,9 @@ static void vga_demo_task(void) {
     vga_puts("- IDT: 256 entries\n");
     vga_puts("- PIC: 8259A IRQ controller\n");
     vga_puts("- MMU: 4KB paging enabled\n");
+    vga_puts("- Cache: MTRR/PAT memory types\n");
+    vga_puts("- VMX: Intel VT-x virtualization\n");
+    vga_puts("- PerfMon: CPU performance counters\n");
     vga_puts("- Thermal: CPU temperature monitor\n");
     vga_puts("- Power: P-states/C-states mgmt\n");
     vga_puts("- IOMMU: VT-d/AMD-Vi translation\n");
@@ -749,6 +755,116 @@ static void iommu_demo_task(void) {
     }
 }
 
+static void cache_demo_task(void) {
+    if (cache_is_mtrr_supported()) {
+        vga_puts_at("Cache: MTRR Supported", 20, 0, VGA_GREEN | (VGA_BLACK << 4));
+
+        u8 num_mtrrs = cache_get_num_variable_mtrrs();
+        u32 line_size = cache_get_line_size();
+        u32 l1_size = cache_get_l1_size();
+        u32 l2_size = cache_get_l2_size();
+
+        char mtrr_str[40];
+        sprintf(mtrr_str, "MTRRs: %u Line: %u bytes", num_mtrrs, line_size);
+        vga_puts_at(mtrr_str, 21, 0, VGA_CYAN | (VGA_BLACK << 4));
+
+        char cache_str[40];
+        sprintf(cache_str, "L1: %uKB L2: %uKB", l1_size, l2_size);
+        vga_puts_at(cache_str, 22, 0, VGA_YELLOW | (VGA_BLACK << 4));
+
+        if (cache_is_pat_supported()) {
+            vga_puts_at("PAT: Supported", 23, 0, VGA_GREEN | (VGA_BLACK << 4));
+        } else {
+            vga_puts_at("PAT: Not supported", 23, 0, VGA_RED | (VGA_BLACK << 4));
+        }
+    } else {
+        vga_puts_at("Cache: MTRR Not supported", 20, 0, VGA_RED | (VGA_BLACK << 4));
+    }
+
+    while (1) {
+        timer_delay(3000);
+    }
+}
+
+static void vmx_demo_task(void) {
+    if (vmx_is_supported()) {
+        vga_puts_at("VMX: Supported", 20, 40, VGA_GREEN | (VGA_BLACK << 4));
+
+        if (vmx_is_enabled()) {
+            vga_puts_at("Status: Enabled", 21, 40, VGA_GREEN | (VGA_BLACK << 4));
+
+            u32 vmcs_rev = vmx_get_vmcs_revision_id();
+            u32 vmcs_size = vmx_get_vmcs_size();
+
+            char vmcs_str[40];
+            sprintf(vmcs_str, "VMCS: Rev %08X Size %u", vmcs_rev, vmcs_size);
+            vga_puts_at(vmcs_str, 22, 40, VGA_CYAN | (VGA_BLACK << 4));
+
+            char features[40] = "Features: ";
+            if (vmx_is_ept_supported()) strcat(features, "EPT ");
+            if (vmx_is_vpid_supported()) strcat(features, "VPID ");
+            if (vmx_is_unrestricted_guest_supported()) strcat(features, "UG");
+            vga_puts_at(features, 23, 40, VGA_YELLOW | (VGA_BLACK << 4));
+        } else {
+            vga_puts_at("Status: Disabled", 21, 40, VGA_YELLOW | (VGA_BLACK << 4));
+        }
+    } else {
+        vga_puts_at("VMX: Not supported", 20, 40, VGA_RED | (VGA_BLACK << 4));
+    }
+
+    while (1) {
+        timer_delay(4000);
+    }
+}
+
+static void perfmon_demo_task(void) {
+    vga_set_cursor(12, 0);
+    vga_puts("Performance Monitoring:\n");
+
+    if (perfmon_is_supported()) {
+        u8 version = perfmon_get_version();
+        u8 num_counters = perfmon_get_num_counters();
+        u8 counter_width = perfmon_get_counter_width();
+        u8 num_fixed = perfmon_get_num_fixed_counters();
+
+        char ver_str[40];
+        sprintf(ver_str, "Version: %u Counters: %u/%u", version, num_counters, num_fixed);
+        vga_puts_at(ver_str, 13, 0, VGA_CYAN | (VGA_BLACK << 4));
+
+        char width_str[40];
+        sprintf(width_str, "Width: %u bits", counter_width);
+        vga_puts_at(width_str, 14, 0, VGA_YELLOW | (VGA_BLACK << 4));
+
+        /* Setup and enable instruction counter */
+        static u8 setup_done = 0;
+        if (!setup_done) {
+            perfmon_setup_counter(0, PERF_EVENT_INSTRUCTIONS, 0, 1, 1, "Instructions");
+            perfmon_enable_counter(0);
+            perfmon_enable_fixed_counter(0); /* Instructions retired */
+            perfmon_enable_all();
+            setup_done = 1;
+        }
+
+        /* Read counters */
+        u64 instructions = perfmon_read_counter(0);
+        u64 fixed_instructions = perfmon_read_fixed_counter(0);
+
+        char inst_str[40];
+        sprintf(inst_str, "Instructions: %u", (u32)instructions);
+        vga_puts_at(inst_str, 15, 0, VGA_GREEN | (VGA_BLACK << 4));
+
+        char fixed_str[40];
+        sprintf(fixed_str, "Fixed: %u", (u32)fixed_instructions);
+        vga_puts_at(fixed_str, 16, 0, VGA_LBLUE | (VGA_BLACK << 4));
+    } else {
+        vga_puts_at("PerfMon: Not supported", 13, 0, VGA_RED | (VGA_BLACK << 4));
+    }
+
+    while (1) {
+        timer_delay(2000);
+    }
+}
+
 static void system_info_task(void) {
     while (1) {
         /* Update system stats */
@@ -780,18 +896,21 @@ void x86_pc_demo_init(void) {
     task_create(serial_demo_task, 10, 256);
     task_create(floppy_demo_task, 11, 512);
     task_create(smbios_demo_task, 12, 256);
-    task_create(iommu_demo_task, 13, 256);
-    task_create(acpi_demo_task, 14, 256);
-    task_create(apic_demo_task, 15, 256);
-    task_create(usb_demo_task, 16, 256);
-    task_create(audio_demo_task, 17, 256);
-    task_create(network_demo_task, 18, 256);
-    task_create(dma_demo_task, 19, 256);
-    task_create(hpet_demo_task, 20, 256);
-    task_create(msr_demo_task, 21, 256);
-    task_create(thermal_demo_task, 22, 256);
-    task_create(power_demo_task, 23, 256);
-    task_create(system_info_task, 24, 256);
+    task_create(perfmon_demo_task, 13, 256);
+    task_create(iommu_demo_task, 14, 256);
+    task_create(acpi_demo_task, 15, 256);
+    task_create(apic_demo_task, 16, 256);
+    task_create(usb_demo_task, 17, 256);
+    task_create(audio_demo_task, 18, 256);
+    task_create(network_demo_task, 19, 256);
+    task_create(dma_demo_task, 20, 256);
+    task_create(hpet_demo_task, 21, 256);
+    task_create(msr_demo_task, 22, 256);
+    task_create(thermal_demo_task, 23, 256);
+    task_create(power_demo_task, 24, 256);
+    task_create(cache_demo_task, 25, 256);
+    task_create(vmx_demo_task, 26, 256);
+    task_create(system_info_task, 27, 256);
 }
 
 /* Simple string functions */
