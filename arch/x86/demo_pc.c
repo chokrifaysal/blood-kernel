@@ -20,6 +20,9 @@
 #include "drivers/dma.h"
 #include "drivers/ac97.h"
 #include "drivers/rtl8139.h"
+#include "drivers/hpet.h"
+#include "drivers/msr.h"
+#include "drivers/smbios.h"
 
 extern void timer_delay(u32 ms);
 
@@ -40,6 +43,9 @@ static void vga_demo_task(void) {
     vga_puts("- IDT: 256 entries\n");
     vga_puts("- PIC: 8259A IRQ controller\n");
     vga_puts("- MMU: 4KB paging enabled\n");
+    vga_puts("- HPET: High Precision Timer\n");
+    vga_puts("- MSR: Model Specific Registers\n");
+    vga_puts("- SMBIOS: System Management BIOS\n");
     vga_puts("- DMA: 8237A controller\n");
     vga_puts("- AC97: Audio codec\n");
     vga_puts("- RTL8139: Fast Ethernet\n");
@@ -530,6 +536,110 @@ static void dma_demo_task(void) {
     }
 }
 
+static void hpet_demo_task(void) {
+    if (hpet_is_initialized()) {
+        vga_puts_at("HPET: Initialized", 20, 0, VGA_GREEN | (VGA_BLACK << 4));
+
+        u64 frequency = hpet_get_frequency();
+        u8 num_timers = hpet_get_num_timers();
+
+        char hpet_str[40];
+        sprintf(hpet_str, "Freq: %u Hz, Timers: %u", (u32)frequency, num_timers);
+        vga_puts_at(hpet_str, 21, 0, VGA_CYAN | (VGA_BLACK << 4));
+
+        /* Show high precision timestamp */
+        static u32 counter = 0;
+        if (counter % 10 == 0) {
+            u64 timestamp = hpet_get_timestamp_us();
+            char ts_str[40];
+            sprintf(ts_str, "Timestamp: %u us", (u32)timestamp);
+            vga_puts_at(ts_str, 22, 0, VGA_YELLOW | (VGA_BLACK << 4));
+        }
+        counter++;
+    } else {
+        vga_puts_at("HPET: Not available", 20, 0, VGA_RED | (VGA_BLACK << 4));
+    }
+
+    while (1) {
+        timer_delay(100);
+    }
+}
+
+static void msr_demo_task(void) {
+    if (msr_is_supported()) {
+        vga_puts_at("MSR: Supported", 20, 40, VGA_GREEN | (VGA_BLACK << 4));
+
+        /* Show TSC frequency */
+        u64 tsc_freq = msr_get_tsc_frequency();
+        char freq_str[40];
+        sprintf(freq_str, "TSC: %u MHz", (u32)(tsc_freq / 1000000));
+        vga_puts_at(freq_str, 21, 40, VGA_CYAN | (VGA_BLACK << 4));
+
+        /* Show APIC base */
+        u64 apic_base = msr_get_apic_base();
+        char apic_str[40];
+        sprintf(apic_str, "APIC: %08X", (u32)apic_base);
+        vga_puts_at(apic_str, 22, 40, VGA_YELLOW | (VGA_BLACK << 4));
+
+        /* Show microcode version */
+        u32 microcode = msr_get_microcode_version();
+        char mc_str[40];
+        sprintf(mc_str, "Microcode: %08X", microcode);
+        vga_puts_at(mc_str, 23, 40, VGA_LGRAY | (VGA_BLACK << 4));
+    } else {
+        vga_puts_at("MSR: Not supported", 20, 40, VGA_RED | (VGA_BLACK << 4));
+    }
+
+    while (1) {
+        timer_delay(2000);
+    }
+}
+
+static void smbios_demo_task(void) {
+    vga_set_cursor(12, 0);
+    vga_puts("SMBIOS Information:\n");
+
+    if (smbios_is_available()) {
+        u8 major = smbios_get_version_major();
+        u8 minor = smbios_get_version_minor();
+
+        char ver_str[40];
+        sprintf(ver_str, "Version: %u.%u", major, minor);
+        vga_puts_at(ver_str, 13, 0, VGA_CYAN | (VGA_BLACK << 4));
+
+        /* System information */
+        const char* manufacturer = smbios_get_system_manufacturer();
+        const char* product = smbios_get_system_product();
+
+        char sys_str[80];
+        sprintf(sys_str, "System: %.20s %.20s", manufacturer, product);
+        vga_puts_at(sys_str, 14, 0, VGA_YELLOW | (VGA_BLACK << 4));
+
+        /* BIOS information */
+        const char* bios_vendor = smbios_get_bios_vendor();
+        const char* bios_version = smbios_get_bios_version();
+
+        char bios_str[80];
+        sprintf(bios_str, "BIOS: %.15s %.15s", bios_vendor, bios_version);
+        vga_puts_at(bios_str, 15, 0, VGA_GREEN | (VGA_BLACK << 4));
+
+        /* Processor information */
+        const char* cpu_mfg = smbios_get_processor_manufacturer(0);
+        u16 cpu_speed = smbios_get_processor_speed(0);
+        u8 cores = smbios_get_processor_core_count(0);
+
+        char cpu_str[80];
+        sprintf(cpu_str, "CPU: %.15s %u MHz %u cores", cpu_mfg, cpu_speed, cores);
+        vga_puts_at(cpu_str, 16, 0, VGA_LBLUE | (VGA_BLACK << 4));
+    } else {
+        vga_puts_at("SMBIOS: Not available", 13, 0, VGA_RED | (VGA_BLACK << 4));
+    }
+
+    while (1) {
+        timer_delay(5000);
+    }
+}
+
 static void system_info_task(void) {
     while (1) {
         /* Update system stats */
@@ -538,7 +648,7 @@ static void system_info_task(void) {
 
         char stats[80];
         sprintf(stats, "Ticks: %u  Freq: %u Hz", ticks, freq);
-        vga_puts_at(stats, 23, 0, VGA_YELLOW | (VGA_BLACK << 4));
+        vga_puts_at(stats, 24, 0, VGA_YELLOW | (VGA_BLACK << 4));
 
         timer_delay(1000);
     }
@@ -560,13 +670,16 @@ void x86_pc_demo_init(void) {
     task_create(rtc_demo_task, 9, 256);
     task_create(serial_demo_task, 10, 256);
     task_create(floppy_demo_task, 11, 512);
-    task_create(acpi_demo_task, 12, 256);
-    task_create(apic_demo_task, 13, 256);
-    task_create(usb_demo_task, 14, 256);
-    task_create(audio_demo_task, 15, 256);
-    task_create(network_demo_task, 16, 256);
-    task_create(dma_demo_task, 17, 256);
-    task_create(system_info_task, 18, 256);
+    task_create(smbios_demo_task, 12, 256);
+    task_create(acpi_demo_task, 13, 256);
+    task_create(apic_demo_task, 14, 256);
+    task_create(usb_demo_task, 15, 256);
+    task_create(audio_demo_task, 16, 256);
+    task_create(network_demo_task, 17, 256);
+    task_create(dma_demo_task, 18, 256);
+    task_create(hpet_demo_task, 19, 256);
+    task_create(msr_demo_task, 20, 256);
+    task_create(system_info_task, 21, 256);
 }
 
 /* Simple string functions */

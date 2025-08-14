@@ -6,7 +6,7 @@
 
 const char *arch_name(void) { return "x86-32"; }
 const char *mcu_name(void)  { return "QEMU-i686"; }
-const char *boot_name(void) { return "DMA+AC97+RTL8139"; }
+const char *boot_name(void) { return "HPET+MSR+SMBIOS"; }
 
 void vga_init(void);
 void ps2_kbd_init(void);
@@ -26,6 +26,9 @@ u8 uhci_init(u16 io_base, u8 irq);
 void dma_init(void);
 u8 ac97_init(u16 nambar, u16 nabmbar, u8 irq);
 u8 rtl8139_init(u16 io_base, u8 irq);
+u8 hpet_init(u64 base_address);
+void msr_init(void);
+void smbios_init(void);
 void x86_pc_demo_init(void);
 
 void clock_init(void) {
@@ -39,8 +42,22 @@ void clock_init(void) {
     /* Initialize memory management */
     paging_init(64 * 1024 * 1024); /* 64MB default */
 
+    /* Initialize MSR support */
+    msr_init();
+
+    /* Initialize SMBIOS */
+    smbios_init();
+
     /* Initialize ACPI */
     acpi_init();
+
+    /* Initialize HPET if available */
+    extern void* acpi_find_table(const char* signature);
+    void* hpet_table = acpi_find_table("HPET");
+    if (hpet_table) {
+        u64 hpet_base = *(u64*)((u8*)hpet_table + 44); /* HPET base address */
+        hpet_init(hpet_base);
+    }
 
     /* Initialize APIC if available */
     extern u32 acpi_get_local_apic_base(void);

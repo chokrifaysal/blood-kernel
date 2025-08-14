@@ -7,6 +7,9 @@
 - **PIC**: 8259A Programmable Interrupt Controller with IRQ management
 - **MMU**: 4KB page-based memory management with demand paging
 - **CPUID**: CPU identification and feature detection
+- **HPET**: High Precision Event Timer with nanosecond accuracy
+- **MSR**: Model Specific Registers for CPU control and monitoring
+- **SMBIOS**: System Management BIOS for hardware information
 - **DMA**: 8237A Direct Memory Access controller with 8 channels
 - **AC97**: Audio Codec '97 sound card with PCM playback
 - **RTL8139**: Realtek Fast Ethernet 10/100 network controller
@@ -69,6 +72,27 @@ qemu-system-x86_64 -kernel build/kernel.bin
 - CPU brand string and model info
 - Feature flags (SSE, AVX, etc.)
 - TSC and RDRAND support
+
+### High Precision Timer
+- HPET with femtosecond resolution
+- Multiple timer comparators
+- Periodic and one-shot modes
+- TSC frequency calibration
+- Nanosecond delay functions
+
+### Model Specific Registers
+- MSR read/write operations
+- TSC frequency detection
+- APIC base address management
+- MTRR memory type configuration
+- Performance counter setup
+
+### System Management BIOS
+- SMBIOS table parsing
+- Hardware inventory information
+- System manufacturer and model
+- Processor specifications
+- BIOS version and features
 
 ### ACPI Support
 - RSDP/RSDT table parsing
