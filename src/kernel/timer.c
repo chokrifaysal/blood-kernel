@@ -86,7 +86,13 @@ void SysTick_Handler(void) {
 }
 
 #elif defined(__AVR_ARCH__)
-// AVR timer 
+// AVR timer
+extern void timer_init(void);
+extern u32 timer_ticks(void);
+extern void timer_delay(u32 ms);
+
+#elif defined(__RP2040__)
+// RP2040 timer in ASF
 extern void timer_init(void);
 extern u32 timer_ticks(void);
 extern void timer_delay(u32 ms);
