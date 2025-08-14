@@ -3,6 +3,10 @@
 **Intel/AMD x86-64 PC with standard hardware**
 
 ## Features
+- **IDT**: 256-entry Interrupt Descriptor Table with exception handling
+- **PIC**: 8259A Programmable Interrupt Controller with IRQ management
+- **MMU**: 4KB page-based memory management with demand paging
+- **CPUID**: CPU identification and feature detection
 - **VGA Text Mode**: 80x25 color display @ 0xB8000
 - **PS/2 Keyboard**: Full scan code translation with modifiers
 - **PCI Bus**: Device enumeration and configuration
@@ -11,7 +15,12 @@
 - **PC Speaker**: Beep generation via PIT channel 2
 
 ## Memory Map
+- **Kernel**: 0x00100000-0x00400000 (3 MB)
+- **Page Directory**: 4 KB aligned
+- **Page Tables**: 4 KB each
+- **Heap**: 0xD0000000-0xE0000000 (256 MB)
 - **VGA Buffer**: 0xB8000 (32 kB)
+- **PIC**: 0x20/0x21, 0xA0/0xA1
 - **PCI Config**: 0xCF8/0xCFC
 - **PIT**: 0x40-0x43
 - **PS/2**: 0x60/0x64
@@ -24,6 +33,26 @@ qemu-system-x86_64 -kernel build/kernel.bin
 ```
 
 ## Hardware Drivers
+
+### Interrupt System
+- IDT with 256 entries for exceptions and IRQs
+- Exception handlers for all x86 faults
+- IRQ routing through 8259A PIC
+- Atomic operations and memory barriers
+
+### Memory Management
+- 4KB page-based virtual memory
+- Identity mapping for kernel space
+- Higher-half kernel at 0xC0000000
+- Demand paging for heap allocation
+- Physical page bitmap allocator
+
+### CPU Identification
+- CPUID instruction support detection
+- Vendor string (Intel, AMD, etc.)
+- CPU brand string and model info
+- Feature flags (SSE, AVX, etc.)
+- TSC and RDRAND support
 
 ### VGA Text Mode
 - 80x25 character display

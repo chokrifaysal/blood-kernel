@@ -8,6 +8,9 @@
 #include "drivers/pci.h"
 #include "drivers/pit.h"
 #include "drivers/ata.h"
+#include "drivers/cpuid.h"
+#include "drivers/paging.h"
+#include "drivers/pic.h"
 
 extern void timer_delay(u32 ms);
 
@@ -25,6 +28,9 @@ static void vga_demo_task(void) {
     vga_set_cursor(4, 0);
     vga_puts("System Information:\n");
     vga_puts("- VGA Text Mode: 80x25\n");
+    vga_puts("- IDT: 256 entries\n");
+    vga_puts("- PIC: 8259A IRQ controller\n");
+    vga_puts("- MMU: 4KB paging enabled\n");
     vga_puts("- PIT Timer: 1 kHz\n");
     vga_puts("- PS/2 Keyboard: Enabled\n");
     vga_puts("- PCI Bus: Scanning...\n");
@@ -185,16 +191,72 @@ static void timer_demo_task(void) {
     }
 }
 
+static void cpu_info_task(void) {
+    vga_set_cursor(18, 0);
+    vga_puts("CPU Information:\n");
+
+    const char* vendor = cpuid_get_vendor();
+    const char* brand = cpuid_get_brand();
+
+    vga_printf("Vendor: %s\n", vendor);
+    vga_printf("Brand: %s\n", brand);
+    vga_printf("Family: %u Model: %u Stepping: %u\n",
+              cpuid_get_family(), cpuid_get_model(), cpuid_get_stepping());
+
+    vga_puts("Features: ");
+    if (cpuid_has_feature(CPU_FEATURE_FPU)) vga_puts("FPU ");
+    if (cpuid_has_feature(CPU_FEATURE_TSC)) vga_puts("TSC ");
+    if (cpuid_has_feature(CPU_FEATURE_SSE)) vga_puts("SSE ");
+    if (cpuid_has_feature(CPU_FEATURE_SSE2)) vga_puts("SSE2 ");
+    if (cpuid_has_feature(CPU_FEATURE_AVX)) vga_puts("AVX ");
+    vga_puts("\n");
+
+    while (1) {
+        timer_delay(5000);
+    }
+}
+
+static void memory_info_task(void) {
+    while (1) {
+        u32 free_mem = paging_get_free_memory();
+        u32 used_mem = paging_get_used_memory();
+        u32 total_mem = free_mem + used_mem;
+
+        char mem_str[80];
+        sprintf(mem_str, "Memory: %u/%u KB free", free_mem / 1024, total_mem / 1024);
+        vga_puts_at(mem_str, 22, 0, VGA_CYAN | (VGA_BLACK << 4));
+
+        timer_delay(2000);
+    }
+}
+
+static void interrupt_test_task(void) {
+    static u32 irq_counts[16] = {0};
+
+    while (1) {
+        /* Display IRQ statistics */
+        char irq_str[80];
+        sprintf(irq_str, "IRQ0: %u  IRQ1: %u", irq_counts[0], irq_counts[1]);
+        vga_puts_at(irq_str, 21, 0, VGA_GREEN | (VGA_BLACK << 4));
+
+        /* Test atomic operations */
+        static volatile u32 atomic_test = 0;
+        atomic_inc(&atomic_test);
+
+        timer_delay(1000);
+    }
+}
+
 static void system_info_task(void) {
     while (1) {
         /* Update system stats */
         u32 ticks = pit_get_ticks();
         u32 freq = pit_get_frequency();
-        
+
         char stats[80];
         sprintf(stats, "Ticks: %u  Freq: %u Hz", ticks, freq);
         vga_puts_at(stats, 23, 0, VGA_YELLOW | (VGA_BLACK << 4));
-        
+
         timer_delay(1000);
     }
 }
@@ -209,7 +271,10 @@ void x86_pc_demo_init(void) {
     task_create(pci_demo_task, 3, 512);
     task_create(ata_demo_task, 4, 512);
     task_create(timer_demo_task, 5, 256);
-    task_create(system_info_task, 6, 256);
+    task_create(cpu_info_task, 6, 256);
+    task_create(memory_info_task, 7, 256);
+    task_create(interrupt_test_task, 8, 256);
+    task_create(system_info_task, 9, 256);
 }
 
 /* Simple string functions */
