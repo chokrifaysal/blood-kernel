@@ -61,7 +61,7 @@ void timer_init(void) {
     SYSTICK_LOAD = 10500 - 1;
     SYSTICK_VAL = 0;
     SYSTICK_CTRL = (1<<0) | (1<<1) | (1<<2);
-    
+
     uart_puts("SysTick timer: 1 kHz\r\n");
 }
 
@@ -84,5 +84,17 @@ void SysTick_Handler(void) {
         *(volatile u32*)0xE000ED04 = (1<<28);  // PendSV
     }
 }
+
+#elif defined(__AVR_ARCH__)
+// AVR timer 
+extern void timer_init(void);
+extern u32 timer_ticks(void);
+extern void timer_delay(u32 ms);
+
+#else
+// stub implementations
+void timer_init(void) { }
+u32 timer_ticks(void) { return 0; }
+void timer_delay(u32 ms) { (void)ms; }
 
 #endif

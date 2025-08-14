@@ -20,6 +20,7 @@ SECTIONS
         KEEP(*(.init7))
         KEEP(*(.init8))
         KEEP(*(.init9))
+        KEEP(*(.vectors))
         *(.text*)
     } > FLASH
 
