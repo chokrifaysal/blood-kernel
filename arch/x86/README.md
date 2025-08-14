@@ -7,6 +7,9 @@
 - **PIC**: 8259A Programmable Interrupt Controller with IRQ management
 - **MMU**: 4KB page-based memory management with demand paging
 - **CPUID**: CPU identification and feature detection
+- **RTC**: MC146818 Real-Time Clock with CMOS memory access
+- **Serial**: 16550 UART COM1/COM2/COM3/COM4 with interrupt buffering
+- **Floppy**: 82077AA controller for 1.44MB/720KB/1.2MB/360KB drives
 - **VGA Text Mode**: 80x25 color display @ 0xB8000
 - **PS/2 Keyboard**: Full scan code translation with modifiers
 - **PCI Bus**: Device enumeration and configuration
@@ -20,6 +23,10 @@
 - **Page Tables**: 4 KB each
 - **Heap**: 0xD0000000-0xE0000000 (256 MB)
 - **VGA Buffer**: 0xB8000 (32 kB)
+- **CMOS/RTC**: 0x70/0x71
+- **COM1**: 0x3F8-0x3FF (IRQ4)
+- **COM2**: 0x2F8-0x2FF (IRQ3)
+- **Floppy**: 0x3F0-0x3F7 (IRQ6, DMA2)
 - **PIC**: 0x20/0x21, 0xA0/0xA1
 - **PCI Config**: 0xCF8/0xCFC
 - **PIT**: 0x40-0x43
@@ -53,6 +60,27 @@ qemu-system-x86_64 -kernel build/kernel.bin
 - CPU brand string and model info
 - Feature flags (SSE, AVX, etc.)
 - TSC and RDRAND support
+
+### Real-Time Clock
+- MC146818 RTC with battery backup
+- Date/time reading and setting
+- Alarm functionality with interrupts
+- CMOS memory access (128 bytes)
+- System configuration storage
+
+### Serial Ports
+- 16550 UART with FIFO buffers
+- COM1/COM2/COM3/COM4 support
+- Configurable baud rates up to 115200
+- Hardware flow control (RTS/CTS/DTR)
+- Interrupt-driven I/O with buffering
+
+### Floppy Disk Controller
+- 82077AA compatible controller
+- Support for 1.44MB, 720KB, 1.2MB, 360KB
+- DMA-based sector read/write
+- Drive detection via CMOS
+- CHS addressing with seek optimization
 
 ### VGA Text Mode
 - 80x25 character display

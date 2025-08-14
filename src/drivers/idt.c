@@ -196,7 +196,10 @@ void isr_handler(u32 int_no, u32 err_code, u32 eip, u32 cs, u32 eflags) {
 void irq_handler(u32 irq_no) {
     extern void pit_irq_handler(void);
     extern void ps2_kbd_irq_handler(void);
-    
+    extern void rtc_irq_handler(void);
+    extern void serial_irq_handler(u8 port);
+    extern void floppy_irq_handler(void);
+
     /* Handle specific IRQs */
     switch (irq_no) {
         case 0: /* PIT timer */
@@ -204,6 +207,18 @@ void irq_handler(u32 irq_no) {
             break;
         case 1: /* Keyboard */
             ps2_kbd_irq_handler();
+            break;
+        case 3: /* COM2 */
+            serial_irq_handler(1);
+            break;
+        case 4: /* COM1 */
+            serial_irq_handler(0);
+            break;
+        case 6: /* Floppy */
+            floppy_irq_handler();
+            break;
+        case 8: /* RTC */
+            rtc_irq_handler();
             break;
         case 14: /* Primary ATA */
         case 15: /* Secondary ATA */

@@ -11,6 +11,9 @@
 #include "drivers/cpuid.h"
 #include "drivers/paging.h"
 #include "drivers/pic.h"
+#include "drivers/rtc.h"
+#include "drivers/serial.h"
+#include "drivers/floppy.h"
 
 extern void timer_delay(u32 ms);
 
@@ -31,6 +34,9 @@ static void vga_demo_task(void) {
     vga_puts("- IDT: 256 entries\n");
     vga_puts("- PIC: 8259A IRQ controller\n");
     vga_puts("- MMU: 4KB paging enabled\n");
+    vga_puts("- RTC: MC146818 real-time clock\n");
+    vga_puts("- COM1/COM2: 16550 UART\n");
+    vga_puts("- FDC: 82077AA floppy controller\n");
     vga_puts("- PIT Timer: 1 kHz\n");
     vga_puts("- PS/2 Keyboard: Enabled\n");
     vga_puts("- PCI Bus: Scanning...\n");
@@ -247,6 +253,94 @@ static void interrupt_test_task(void) {
     }
 }
 
+static void rtc_demo_task(void) {
+    vga_set_cursor(12, 40);
+    vga_puts("Real-Time Clock:\n");
+
+    while (1) {
+        rtc_time_t time;
+        rtc_read_time(&time);
+
+        char time_str[40];
+        sprintf(time_str, "%04u-%02u-%02u %02u:%02u:%02u",
+                time.year, time.month, time.day,
+                time.hour, time.minute, time.second);
+
+        vga_puts_at(time_str, 13, 40, VGA_CYAN | (VGA_BLACK << 4));
+
+        /* Show CMOS info */
+        u16 base_mem = cmos_get_base_memory();
+        u16 ext_mem = cmos_get_extended_memory();
+
+        char mem_str[40];
+        sprintf(mem_str, "CMOS: %u KB base, %u KB ext", base_mem, ext_mem);
+        vga_puts_at(mem_str, 14, 40, VGA_LGRAY | (VGA_BLACK << 4));
+
+        timer_delay(1000);
+    }
+}
+
+static void serial_demo_task(void) {
+    static u32 counter = 0;
+
+    while (1) {
+        /* Send test data to COM1 */
+        serial_printf(0, "Blood Kernel COM1 test #%u\r\n", counter++);
+
+        /* Echo any received data */
+        if (serial_available(0)) {
+            char c = serial_getc(0);
+            serial_printf(0, "Echo: %c\r\n", c);
+
+            /* Also display on VGA */
+            char echo_str[20];
+            sprintf(echo_str, "COM1 RX: %c", c);
+            vga_puts_at(echo_str, 15, 40, VGA_GREEN | (VGA_BLACK << 4));
+        }
+
+        timer_delay(2000);
+    }
+}
+
+static void floppy_demo_task(void) {
+    vga_set_cursor(16, 40);
+    vga_puts("Floppy Drives:\n");
+
+    /* Detect floppy drives */
+    for (u8 drive = 0; drive < 2; drive++) {
+        u8 type = floppy_detect_type(drive);
+        const floppy_geometry_t* geom = floppy_get_geometry(type);
+
+        char drive_str[40];
+        if (geom) {
+            sprintf(drive_str, "FD%u: %u KB (%ux%ux%u)",
+                    drive,
+                    (geom->sectors_per_track * geom->heads * geom->tracks) / 2,
+                    geom->tracks, geom->heads, geom->sectors_per_track);
+        } else {
+            sprintf(drive_str, "FD%u: Not present", drive);
+        }
+
+        vga_puts_at(drive_str, 17 + drive, 40, VGA_YELLOW | (VGA_BLACK << 4));
+    }
+
+    /* Test read from floppy A: */
+    static u8 test_done = 0;
+    if (!test_done) {
+        u8 buffer[512];
+        if (floppy_read_sector(0, 0, 0, 1, buffer)) {
+            vga_puts_at("FD0: Boot sector read OK", 19, 40, VGA_GREEN | (VGA_BLACK << 4));
+        } else {
+            vga_puts_at("FD0: No disk or read error", 19, 40, VGA_RED | (VGA_BLACK << 4));
+        }
+        test_done = 1;
+    }
+
+    while (1) {
+        timer_delay(5000);
+    }
+}
+
 static void system_info_task(void) {
     while (1) {
         /* Update system stats */
@@ -274,7 +368,10 @@ void x86_pc_demo_init(void) {
     task_create(cpu_info_task, 6, 256);
     task_create(memory_info_task, 7, 256);
     task_create(interrupt_test_task, 8, 256);
-    task_create(system_info_task, 9, 256);
+    task_create(rtc_demo_task, 9, 256);
+    task_create(serial_demo_task, 10, 256);
+    task_create(floppy_demo_task, 11, 512);
+    task_create(system_info_task, 12, 256);
 }
 
 /* Simple string functions */
