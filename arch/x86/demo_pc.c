@@ -14,6 +14,9 @@
 #include "drivers/rtc.h"
 #include "drivers/serial.h"
 #include "drivers/floppy.h"
+#include "drivers/acpi.h"
+#include "drivers/apic.h"
+#include "drivers/usb_uhci.h"
 
 extern void timer_delay(u32 ms);
 
@@ -34,6 +37,9 @@ static void vga_demo_task(void) {
     vga_puts("- IDT: 256 entries\n");
     vga_puts("- PIC: 8259A IRQ controller\n");
     vga_puts("- MMU: 4KB paging enabled\n");
+    vga_puts("- ACPI: Advanced Config & Power\n");
+    vga_puts("- APIC: Advanced Interrupt Ctrl\n");
+    vga_puts("- USB: UHCI host controller\n");
     vga_puts("- RTC: MC146818 real-time clock\n");
     vga_puts("- COM1/COM2: 16550 UART\n");
     vga_puts("- FDC: 82077AA floppy controller\n");
@@ -341,6 +347,80 @@ static void floppy_demo_task(void) {
     }
 }
 
+static void acpi_demo_task(void) {
+    vga_set_cursor(20, 0);
+    vga_puts("ACPI Information:\n");
+
+    if (acpi_is_available()) {
+        vga_puts("ACPI: Available\n");
+
+        u8 cpu_count = acpi_get_cpu_count();
+        u32 lapic_base = acpi_get_local_apic_base();
+
+        char acpi_str[80];
+        sprintf(acpi_str, "CPUs: %u  LAPIC: %08X", cpu_count, lapic_base);
+        vga_puts_at(acpi_str, 21, 0, VGA_CYAN | (VGA_BLACK << 4));
+
+        if (acpi_is_enabled()) {
+            vga_puts_at("ACPI Mode: Enabled", 22, 0, VGA_GREEN | (VGA_BLACK << 4));
+        } else {
+            vga_puts_at("ACPI Mode: Legacy", 22, 0, VGA_YELLOW | (VGA_BLACK << 4));
+        }
+    } else {
+        vga_puts("ACPI: Not available\n");
+    }
+
+    while (1) {
+        timer_delay(5000);
+    }
+}
+
+static void apic_demo_task(void) {
+    if (apic_is_enabled()) {
+        u8 apic_id = apic_get_id();
+        u32 apic_ver = apic_get_version();
+
+        char apic_str[40];
+        sprintf(apic_str, "APIC ID: %u Ver: %08X", apic_id, apic_ver);
+        vga_puts_at(apic_str, 20, 40, VGA_LBLUE | (VGA_BLACK << 4));
+
+        /* Test APIC timer */
+        apic_timer_init(100); /* 100 Hz */
+        vga_puts_at("APIC Timer: 100 Hz", 21, 40, VGA_GREEN | (VGA_BLACK << 4));
+    } else {
+        vga_puts_at("APIC: Not available", 20, 40, VGA_RED | (VGA_BLACK << 4));
+    }
+
+    while (1) {
+        timer_delay(5000);
+    }
+}
+
+static void usb_demo_task(void) {
+    vga_set_cursor(22, 40);
+    vga_puts("USB Controllers:\n");
+
+    u8 uhci_count = uhci_get_controller_count();
+
+    char usb_str[40];
+    sprintf(usb_str, "UHCI: %u controllers", uhci_count);
+    vga_puts_at(usb_str, 23, 40, VGA_YELLOW | (VGA_BLACK << 4));
+
+    /* Check port status */
+    if (uhci_count > 0) {
+        u16 port0_status = uhci_get_port_status(0, 0);
+        u16 port1_status = uhci_get_port_status(0, 1);
+
+        char port_str[40];
+        sprintf(port_str, "Ports: %04X %04X", port0_status, port1_status);
+        vga_puts_at(port_str, 24, 40, VGA_LGRAY | (VGA_BLACK << 4));
+    }
+
+    while (1) {
+        timer_delay(2000);
+    }
+}
+
 static void system_info_task(void) {
     while (1) {
         /* Update system stats */
@@ -371,7 +451,10 @@ void x86_pc_demo_init(void) {
     task_create(rtc_demo_task, 9, 256);
     task_create(serial_demo_task, 10, 256);
     task_create(floppy_demo_task, 11, 512);
-    task_create(system_info_task, 12, 256);
+    task_create(acpi_demo_task, 12, 256);
+    task_create(apic_demo_task, 13, 256);
+    task_create(usb_demo_task, 14, 256);
+    task_create(system_info_task, 15, 256);
 }
 
 /* Simple string functions */

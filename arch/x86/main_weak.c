@@ -6,7 +6,7 @@
 
 const char *arch_name(void) { return "x86-32"; }
 const char *mcu_name(void)  { return "QEMU-i686"; }
-const char *boot_name(void) { return "RTC+COM+FDC"; }
+const char *boot_name(void) { return "ACPI+APIC+USB"; }
 
 void vga_init(void);
 void ps2_kbd_init(void);
@@ -20,6 +20,9 @@ void enable_interrupts(void);
 void rtc_init(void);
 void serial_init(u8 port, u32 baud_rate, u8 data_bits, u8 stop_bits, u8 parity);
 void floppy_init(void);
+void acpi_init(void);
+void apic_init(u32 lapic_addr, u32 ioapic_addr);
+u8 uhci_init(u16 io_base, u8 irq);
 void x86_pc_demo_init(void);
 
 void clock_init(void) {
@@ -33,11 +36,30 @@ void clock_init(void) {
     /* Initialize memory management */
     paging_init(64 * 1024 * 1024); /* 64MB default */
 
+    /* Initialize ACPI */
+    acpi_init();
+
+    /* Initialize APIC if available */
+    extern u32 acpi_get_local_apic_base(void);
+    extern u8 acpi_is_available(void);
+
+    if (acpi_is_available()) {
+        u32 lapic_base = acpi_get_local_apic_base();
+        apic_init(lapic_base, 0xFEC00000); /* Standard I/O APIC address */
+    }
+
     /* Initialize hardware */
     rtc_init();
     serial_init(0, 115200, 8, 1, 0); /* COM1: 115200 8N1 */
     serial_init(1, 9600, 8, 1, 0);   /* COM2: 9600 8N1 */
     floppy_init();
+
+    /* Initialize USB controllers */
+    extern pci_device_t* pci_find_class(u8 class_code, u8 subclass);
+    pci_device_t* usb_dev = pci_find_class(0x0C, 0x03); /* USB controller */
+    if (usb_dev && usb_dev->prog_if == 0x00) { /* UHCI */
+        uhci_init(usb_dev->bar[4] & 0xFFFC, usb_dev->irq_line);
+    }
 
     /* Enable interrupts */
     pic_enable_irq(0); /* Timer */

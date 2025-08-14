@@ -7,6 +7,9 @@
 - **PIC**: 8259A Programmable Interrupt Controller with IRQ management
 - **MMU**: 4KB page-based memory management with demand paging
 - **CPUID**: CPU identification and feature detection
+- **ACPI**: Advanced Configuration and Power Interface with RSDP/RSDT
+- **APIC**: Advanced Programmable Interrupt Controller with IPI support
+- **USB**: UHCI Universal Host Controller Interface for USB 1.1
 - **RTC**: MC146818 Real-Time Clock with CMOS memory access
 - **Serial**: 16550 UART COM1/COM2/COM3/COM4 with interrupt buffering
 - **Floppy**: 82077AA controller for 1.44MB/720KB/1.2MB/360KB drives
@@ -22,6 +25,8 @@
 - **Page Directory**: 4 KB aligned
 - **Page Tables**: 4 KB each
 - **Heap**: 0xD0000000-0xE0000000 (256 MB)
+- **Local APIC**: 0xFEE00000 (4 kB)
+- **I/O APIC**: 0xFEC00000 (4 kB)
 - **VGA Buffer**: 0xB8000 (32 kB)
 - **CMOS/RTC**: 0x70/0x71
 - **COM1**: 0x3F8-0x3FF (IRQ4)
@@ -60,6 +65,27 @@ qemu-system-x86_64 -kernel build/kernel.bin
 - CPU brand string and model info
 - Feature flags (SSE, AVX, etc.)
 - TSC and RDRAND support
+
+### ACPI Support
+- RSDP/RSDT table parsing
+- FADT and MADT enumeration
+- CPU and I/O APIC detection
+- Power management interface
+- System shutdown and reboot
+
+### APIC System
+- Local APIC initialization and control
+- I/O APIC redirection table setup
+- Inter-processor interrupts (IPI)
+- APIC timer with calibration
+- Error status monitoring
+
+### USB Host Controller
+- UHCI (USB 1.1) controller support
+- Frame list and queue head management
+- Control transfer implementation
+- Port status monitoring and reset
+- Device enumeration framework
 
 ### Real-Time Clock
 - MC146818 RTC with battery backup

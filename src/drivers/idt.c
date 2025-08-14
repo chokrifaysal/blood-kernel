@@ -229,11 +229,19 @@ void irq_handler(u32 irq_no) {
             break;
     }
     
-    /* Send EOI to PIC */
-    if (irq_no >= 8) {
-        /* Secondary PIC */
-        __asm__ volatile("outb %0, $0xA0" : : "a"((u8)0x20));
+    /* Send EOI */
+    extern u8 apic_is_enabled(void);
+    extern void apic_send_eoi(void);
+
+    if (apic_is_enabled()) {
+        apic_send_eoi();
+    } else {
+        /* Send EOI to PIC */
+        if (irq_no >= 8) {
+            /* Secondary PIC */
+            __asm__ volatile("outb %0, $0xA0" : : "a"((u8)0x20));
+        }
+        /* Primary PIC */
+        __asm__ volatile("outb %0, $0x20" : : "a"((u8)0x20));
     }
-    /* Primary PIC */
-    __asm__ volatile("outb %0, $0x20" : : "a"((u8)0x20));
 }
