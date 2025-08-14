@@ -7,6 +7,9 @@
 - **PIC**: 8259A Programmable Interrupt Controller with IRQ management
 - **MMU**: 4KB page-based memory management with demand paging
 - **CPUID**: CPU identification and feature detection
+- **Thermal**: CPU temperature monitoring with digital sensors
+- **Power**: P-states/C-states CPU power management
+- **IOMMU**: Intel VT-d/AMD-Vi memory translation
 - **HPET**: High Precision Event Timer with nanosecond accuracy
 - **MSR**: Model Specific Registers for CPU control and monitoring
 - **SMBIOS**: System Management BIOS for hardware information
@@ -86,6 +89,27 @@ qemu-system-x86_64 -kernel build/kernel.bin
 - APIC base address management
 - MTRR memory type configuration
 - Performance counter setup
+
+### Thermal Management
+- Digital temperature sensors
+- TjMax detection and monitoring
+- Thermal throttling detection
+- Critical temperature protection
+- Thermal event logging
+
+### Power Management
+- P-state frequency scaling
+- C-state idle management
+- Turbo boost control
+- Clock modulation throttling
+- Energy performance bias
+
+### IOMMU Support
+- Intel VT-d implementation
+- Device isolation and protection
+- DMA remapping tables
+- Context and root table management
+- Domain-based memory translation
 
 ### System Management BIOS
 - SMBIOS table parsing

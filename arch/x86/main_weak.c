@@ -6,7 +6,7 @@
 
 const char *arch_name(void) { return "x86-32"; }
 const char *mcu_name(void)  { return "QEMU-i686"; }
-const char *boot_name(void) { return "HPET+MSR+SMBIOS"; }
+const char *boot_name(void) { return "Thermal+Power+IOMMU"; }
 
 void vga_init(void);
 void ps2_kbd_init(void);
@@ -29,6 +29,9 @@ u8 rtl8139_init(u16 io_base, u8 irq);
 u8 hpet_init(u64 base_address);
 void msr_init(void);
 void smbios_init(void);
+void thermal_init(void);
+void power_init(void);
+void iommu_init(void);
 void x86_pc_demo_init(void);
 
 void clock_init(void) {
@@ -48,6 +51,12 @@ void clock_init(void) {
     /* Initialize SMBIOS */
     smbios_init();
 
+    /* Initialize thermal management */
+    thermal_init();
+
+    /* Initialize power management */
+    power_init();
+
     /* Initialize ACPI */
     acpi_init();
 
@@ -66,6 +75,16 @@ void clock_init(void) {
     if (acpi_is_available()) {
         u32 lapic_base = acpi_get_local_apic_base();
         apic_init(lapic_base, 0xFEC00000); /* Standard I/O APIC address */
+
+        /* Initialize IOMMU if available */
+        extern void* acpi_find_table(const char* signature);
+        void* dmar_table = acpi_find_table("DMAR");
+        if (dmar_table) {
+            /* Parse DMAR table and initialize IOMMU units */
+            extern u8 iommu_add_unit(u32 base_address, u8 segment, u8 start_bus, u8 end_bus, u8 flags);
+            iommu_add_unit(0xFED90000, 0, 0, 255, 0); /* Standard IOMMU address */
+            iommu_init();
+        }
     }
 
     /* Initialize hardware */

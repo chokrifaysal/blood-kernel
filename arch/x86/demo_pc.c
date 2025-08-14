@@ -23,6 +23,9 @@
 #include "drivers/hpet.h"
 #include "drivers/msr.h"
 #include "drivers/smbios.h"
+#include "drivers/thermal.h"
+#include "drivers/power.h"
+#include "drivers/iommu.h"
 
 extern void timer_delay(u32 ms);
 
@@ -43,6 +46,9 @@ static void vga_demo_task(void) {
     vga_puts("- IDT: 256 entries\n");
     vga_puts("- PIC: 8259A IRQ controller\n");
     vga_puts("- MMU: 4KB paging enabled\n");
+    vga_puts("- Thermal: CPU temperature monitor\n");
+    vga_puts("- Power: P-states/C-states mgmt\n");
+    vga_puts("- IOMMU: VT-d/AMD-Vi translation\n");
     vga_puts("- HPET: High Precision Timer\n");
     vga_puts("- MSR: Model Specific Registers\n");
     vga_puts("- SMBIOS: System Management BIOS\n");
@@ -640,6 +646,109 @@ static void smbios_demo_task(void) {
     }
 }
 
+static void thermal_demo_task(void) {
+    if (thermal_is_supported()) {
+        vga_puts_at("Thermal: Supported", 20, 0, VGA_GREEN | (VGA_BLACK << 4));
+
+        if (thermal_has_digital_sensor()) {
+            u32 temperature = thermal_get_temperature();
+            u32 tjmax = thermal_get_tjmax();
+            u32 max_temp = thermal_get_max_temperature();
+
+            char temp_str[40];
+            sprintf(temp_str, "Temp: %u°C TjMax: %u°C", temperature, tjmax);
+            vga_puts_at(temp_str, 21, 0, VGA_CYAN | (VGA_BLACK << 4));
+
+            char max_str[40];
+            sprintf(max_str, "Max: %u°C Events: %u", max_temp, thermal_get_event_count());
+            vga_puts_at(max_str, 22, 0, VGA_YELLOW | (VGA_BLACK << 4));
+
+            if (thermal_is_throttling()) {
+                vga_puts_at("Status: THROTTLING", 23, 0, VGA_RED | (VGA_BLACK << 4));
+            } else if (thermal_is_critical()) {
+                vga_puts_at("Status: CRITICAL", 23, 0, VGA_RED | (VGA_BLACK << 4));
+            } else {
+                vga_puts_at("Status: Normal", 23, 0, VGA_GREEN | (VGA_BLACK << 4));
+            }
+        } else {
+            vga_puts_at("Digital sensor: No", 21, 0, VGA_YELLOW | (VGA_BLACK << 4));
+        }
+    } else {
+        vga_puts_at("Thermal: Not supported", 20, 0, VGA_RED | (VGA_BLACK << 4));
+    }
+
+    while (1) {
+        timer_delay(2000);
+    }
+}
+
+static void power_demo_task(void) {
+    if (power_is_pstate_supported()) {
+        vga_puts_at("P-states: Supported", 20, 40, VGA_GREEN | (VGA_BLACK << 4));
+
+        u8 current_pstate = power_get_pstate();
+        u16 frequency = power_get_frequency();
+        u8 max_pstate = power_get_max_pstate();
+        u8 min_pstate = power_get_min_pstate();
+
+        char pstate_str[40];
+        sprintf(pstate_str, "P%u: %u MHz (%u-%u)", current_pstate, frequency, min_pstate, max_pstate);
+        vga_puts_at(pstate_str, 21, 40, VGA_CYAN | (VGA_BLACK << 4));
+
+        if (power_is_turbo_enabled()) {
+            vga_puts_at("Turbo: Enabled", 22, 40, VGA_GREEN | (VGA_BLACK << 4));
+        } else {
+            vga_puts_at("Turbo: Disabled", 22, 40, VGA_YELLOW | (VGA_BLACK << 4));
+        }
+
+        u8 epb = power_get_energy_perf_bias();
+        char epb_str[40];
+        sprintf(epb_str, "EPB: %u (0=Perf 15=Power)", epb);
+        vga_puts_at(epb_str, 23, 40, VGA_LGRAY | (VGA_BLACK << 4));
+    } else {
+        vga_puts_at("P-states: Not supported", 20, 40, VGA_RED | (VGA_BLACK << 4));
+    }
+
+    while (1) {
+        timer_delay(3000);
+    }
+}
+
+static void iommu_demo_task(void) {
+    vga_set_cursor(12, 40);
+    vga_puts("IOMMU Information:\n");
+
+    if (iommu_is_enabled()) {
+        u8 unit_count = iommu_get_unit_count();
+
+        char count_str[40];
+        sprintf(count_str, "Units: %u", unit_count);
+        vga_puts_at(count_str, 13, 40, VGA_CYAN | (VGA_BLACK << 4));
+
+        if (unit_count > 0) {
+            u8 major = iommu_get_unit_version_major(0);
+            u8 minor = iommu_get_unit_version_minor(0);
+            u32 caps = iommu_get_unit_capabilities(0);
+
+            char ver_str[40];
+            sprintf(ver_str, "Version: %u.%u", major, minor);
+            vga_puts_at(ver_str, 14, 40, VGA_YELLOW | (VGA_BLACK << 4));
+
+            char caps_str[40];
+            sprintf(caps_str, "Caps: %08X", caps);
+            vga_puts_at(caps_str, 15, 40, VGA_LGRAY | (VGA_BLACK << 4));
+
+            vga_puts_at("Status: Active", 16, 40, VGA_GREEN | (VGA_BLACK << 4));
+        }
+    } else {
+        vga_puts_at("IOMMU: Not available", 13, 40, VGA_RED | (VGA_BLACK << 4));
+    }
+
+    while (1) {
+        timer_delay(5000);
+    }
+}
+
 static void system_info_task(void) {
     while (1) {
         /* Update system stats */
@@ -671,15 +780,18 @@ void x86_pc_demo_init(void) {
     task_create(serial_demo_task, 10, 256);
     task_create(floppy_demo_task, 11, 512);
     task_create(smbios_demo_task, 12, 256);
-    task_create(acpi_demo_task, 13, 256);
-    task_create(apic_demo_task, 14, 256);
-    task_create(usb_demo_task, 15, 256);
-    task_create(audio_demo_task, 16, 256);
-    task_create(network_demo_task, 17, 256);
-    task_create(dma_demo_task, 18, 256);
-    task_create(hpet_demo_task, 19, 256);
-    task_create(msr_demo_task, 20, 256);
-    task_create(system_info_task, 21, 256);
+    task_create(iommu_demo_task, 13, 256);
+    task_create(acpi_demo_task, 14, 256);
+    task_create(apic_demo_task, 15, 256);
+    task_create(usb_demo_task, 16, 256);
+    task_create(audio_demo_task, 17, 256);
+    task_create(network_demo_task, 18, 256);
+    task_create(dma_demo_task, 19, 256);
+    task_create(hpet_demo_task, 20, 256);
+    task_create(msr_demo_task, 21, 256);
+    task_create(thermal_demo_task, 22, 256);
+    task_create(power_demo_task, 23, 256);
+    task_create(system_info_task, 24, 256);
 }
 
 /* Simple string functions */
