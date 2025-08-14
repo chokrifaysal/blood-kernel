@@ -6,7 +6,7 @@
 
 const char *arch_name(void) { return "x86-32"; }
 const char *mcu_name(void)  { return "QEMU-i686"; }
-const char *boot_name(void) { return "ACPI+APIC+USB"; }
+const char *boot_name(void) { return "DMA+AC97+RTL8139"; }
 
 void vga_init(void);
 void ps2_kbd_init(void);
@@ -23,6 +23,9 @@ void floppy_init(void);
 void acpi_init(void);
 void apic_init(u32 lapic_addr, u32 ioapic_addr);
 u8 uhci_init(u16 io_base, u8 irq);
+void dma_init(void);
+u8 ac97_init(u16 nambar, u16 nabmbar, u8 irq);
+u8 rtl8139_init(u16 io_base, u8 irq);
 void x86_pc_demo_init(void);
 
 void clock_init(void) {
@@ -54,6 +57,9 @@ void clock_init(void) {
     serial_init(1, 9600, 8, 1, 0);   /* COM2: 9600 8N1 */
     floppy_init();
 
+    /* Initialize DMA controller */
+    dma_init();
+
     /* Initialize USB controllers */
     extern pci_device_t* pci_find_class(u8 class_code, u8 subclass);
     pci_device_t* usb_dev = pci_find_class(0x0C, 0x03); /* USB controller */
@@ -61,13 +67,30 @@ void clock_init(void) {
         uhci_init(usb_dev->bar[4] & 0xFFFC, usb_dev->irq_line);
     }
 
+    /* Initialize sound card */
+    pci_device_t* audio_dev = pci_find_class(0x04, 0x01); /* Audio device */
+    if (audio_dev) {
+        u16 nambar = audio_dev->bar[0] & 0xFFFC;
+        u16 nabmbar = audio_dev->bar[1] & 0xFFFC;
+        ac97_init(nambar, nabmbar, audio_dev->irq_line);
+    }
+
+    /* Initialize network card */
+    pci_device_t* net_dev = pci_find_class(0x02, 0x00); /* Ethernet controller */
+    if (net_dev && net_dev->vendor_id == 0x10EC && net_dev->device_id == 0x8139) {
+        u16 io_base = net_dev->bar[0] & 0xFFFC;
+        rtl8139_init(io_base, net_dev->irq_line);
+    }
+
     /* Enable interrupts */
     pic_enable_irq(0); /* Timer */
     pic_enable_irq(1); /* Keyboard */
     pic_enable_irq(3); /* COM2 */
     pic_enable_irq(4); /* COM1 */
+    pic_enable_irq(5); /* Sound card */
     pic_enable_irq(6); /* Floppy */
     pic_enable_irq(8); /* RTC */
+    pic_enable_irq(11); /* Network card */
     enable_interrupts();
 }
 

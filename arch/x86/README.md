@@ -7,6 +7,9 @@
 - **PIC**: 8259A Programmable Interrupt Controller with IRQ management
 - **MMU**: 4KB page-based memory management with demand paging
 - **CPUID**: CPU identification and feature detection
+- **DMA**: 8237A Direct Memory Access controller with 8 channels
+- **AC97**: Audio Codec '97 sound card with PCM playback
+- **RTL8139**: Realtek Fast Ethernet 10/100 network controller
 - **ACPI**: Advanced Configuration and Power Interface with RSDP/RSDT
 - **APIC**: Advanced Programmable Interrupt Controller with IPI support
 - **USB**: UHCI Universal Host Controller Interface for USB 1.1
@@ -28,6 +31,7 @@
 - **Local APIC**: 0xFEE00000 (4 kB)
 - **I/O APIC**: 0xFEC00000 (4 kB)
 - **VGA Buffer**: 0xB8000 (32 kB)
+- **DMA**: 0x00-0x0F, 0xC0-0xDF
 - **CMOS/RTC**: 0x70/0x71
 - **COM1**: 0x3F8-0x3FF (IRQ4)
 - **COM2**: 0x2F8-0x2FF (IRQ3)
@@ -79,6 +83,27 @@ qemu-system-x86_64 -kernel build/kernel.bin
 - Inter-processor interrupts (IPI)
 - APIC timer with calibration
 - Error status monitoring
+
+### DMA Controller
+- 8237A dual-controller support (8 channels)
+- Memory-to-device and device-to-memory transfers
+- Single, block, and demand transfer modes
+- Channel allocation and management
+- Transfer completion monitoring
+
+### Audio System
+- AC97 audio codec support
+- PCM audio playback with DMA
+- Volume control and mixing
+- Tone generation for system sounds
+- Interrupt-driven buffer management
+
+### Network Interface
+- RTL8139 Fast Ethernet controller
+- 10/100 Mbps operation
+- Packet transmission and reception
+- MAC address configuration
+- Link status monitoring
 
 ### USB Host Controller
 - UHCI (USB 1.1) controller support

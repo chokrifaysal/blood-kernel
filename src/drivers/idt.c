@@ -199,6 +199,8 @@ void irq_handler(u32 irq_no) {
     extern void rtc_irq_handler(void);
     extern void serial_irq_handler(u8 port);
     extern void floppy_irq_handler(void);
+    extern void ac97_irq_handler(void);
+    extern void rtl8139_irq_handler(void);
 
     /* Handle specific IRQs */
     switch (irq_no) {
@@ -219,6 +221,12 @@ void irq_handler(u32 irq_no) {
             break;
         case 8: /* RTC */
             rtc_irq_handler();
+            break;
+        case 5: /* Sound card (AC97) */
+            ac97_irq_handler();
+            break;
+        case 11: /* Network card (RTL8139) */
+            rtl8139_irq_handler();
             break;
         case 14: /* Primary ATA */
         case 15: /* Secondary ATA */

@@ -17,6 +17,9 @@
 #include "drivers/acpi.h"
 #include "drivers/apic.h"
 #include "drivers/usb_uhci.h"
+#include "drivers/dma.h"
+#include "drivers/ac97.h"
+#include "drivers/rtl8139.h"
 
 extern void timer_delay(u32 ms);
 
@@ -37,6 +40,9 @@ static void vga_demo_task(void) {
     vga_puts("- IDT: 256 entries\n");
     vga_puts("- PIC: 8259A IRQ controller\n");
     vga_puts("- MMU: 4KB paging enabled\n");
+    vga_puts("- DMA: 8237A controller\n");
+    vga_puts("- AC97: Audio codec\n");
+    vga_puts("- RTL8139: Fast Ethernet\n");
     vga_puts("- ACPI: Advanced Config & Power\n");
     vga_puts("- APIC: Advanced Interrupt Ctrl\n");
     vga_puts("- USB: UHCI host controller\n");
@@ -421,6 +427,109 @@ static void usb_demo_task(void) {
     }
 }
 
+static void audio_demo_task(void) {
+    if (ac97_is_initialized()) {
+        vga_puts_at("AC97: Initialized", 20, 0, VGA_GREEN | (VGA_BLACK << 4));
+
+        /* Set volume to 50% */
+        ac97_set_volume(50, 50);
+
+        /* Generate test tones */
+        static u32 tone_counter = 0;
+        u16 frequencies[] = {440, 523, 659, 784}; /* A, C, E, G */
+
+        if (tone_counter % 5 == 0) {
+            u16 freq = frequencies[(tone_counter / 5) % 4];
+            ac97_generate_tone(freq, 200);
+
+            char tone_str[40];
+            sprintf(tone_str, "Playing: %u Hz", freq);
+            vga_puts_at(tone_str, 21, 0, VGA_CYAN | (VGA_BLACK << 4));
+        }
+
+        tone_counter++;
+    } else {
+        vga_puts_at("AC97: Not available", 20, 0, VGA_RED | (VGA_BLACK << 4));
+    }
+
+    while (1) {
+        timer_delay(1000);
+    }
+}
+
+static void network_demo_task(void) {
+    if (rtl8139_is_initialized()) {
+        vga_puts_at("RTL8139: Initialized", 22, 0, VGA_GREEN | (VGA_BLACK << 4));
+
+        /* Get MAC address */
+        u8 mac[6];
+        rtl8139_get_mac_address(mac);
+
+        char mac_str[40];
+        sprintf(mac_str, "MAC: %02X:%02X:%02X:%02X:%02X:%02X",
+                mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+        vga_puts_at(mac_str, 23, 0, VGA_CYAN | (VGA_BLACK << 4));
+
+        /* Check link status */
+        if (rtl8139_is_link_up()) {
+            vga_puts_at("Link: UP", 24, 0, VGA_GREEN | (VGA_BLACK << 4));
+        } else {
+            vga_puts_at("Link: DOWN", 24, 0, VGA_RED | (VGA_BLACK << 4));
+        }
+
+        /* Send test packet */
+        static u32 packet_counter = 0;
+        if (packet_counter % 10 == 0) {
+            u8 test_packet[64] = "Blood Kernel Network Test";
+            if (rtl8139_send_packet(test_packet, sizeof(test_packet))) {
+                char pkt_str[40];
+                sprintf(pkt_str, "TX Packets: %u", packet_counter / 10);
+                vga_puts_at(pkt_str, 24, 20, VGA_YELLOW | (VGA_BLACK << 4));
+            }
+        }
+
+        packet_counter++;
+    } else {
+        vga_puts_at("RTL8139: Not available", 22, 0, VGA_RED | (VGA_BLACK << 4));
+    }
+
+    while (1) {
+        timer_delay(1000);
+    }
+}
+
+static void dma_demo_task(void) {
+    vga_puts_at("DMA Controller: 8237A", 20, 40, VGA_LBLUE | (VGA_BLACK << 4));
+
+    /* Test DMA channel availability */
+    u8 available_channels = 0;
+    for (u8 i = 0; i < 8; i++) {
+        if (i != 4) { /* Skip cascade channel */
+            extern u8 dma_is_channel_available(u8 channel);
+            if (dma_is_channel_available(i)) {
+                available_channels++;
+            }
+        }
+    }
+
+    char dma_str[40];
+    sprintf(dma_str, "Available channels: %u", available_channels);
+    vga_puts_at(dma_str, 21, 40, VGA_CYAN | (VGA_BLACK << 4));
+
+    /* Show DMA status */
+    extern u8 dma_get_status(u8 controller);
+    u8 status1 = dma_get_status(0);
+    u8 status2 = dma_get_status(1);
+
+    char status_str[40];
+    sprintf(status_str, "Status: %02X %02X", status1, status2);
+    vga_puts_at(status_str, 22, 40, VGA_YELLOW | (VGA_BLACK << 4));
+
+    while (1) {
+        timer_delay(2000);
+    }
+}
+
 static void system_info_task(void) {
     while (1) {
         /* Update system stats */
@@ -454,7 +563,10 @@ void x86_pc_demo_init(void) {
     task_create(acpi_demo_task, 12, 256);
     task_create(apic_demo_task, 13, 256);
     task_create(usb_demo_task, 14, 256);
-    task_create(system_info_task, 15, 256);
+    task_create(audio_demo_task, 15, 256);
+    task_create(network_demo_task, 16, 256);
+    task_create(dma_demo_task, 17, 256);
+    task_create(system_info_task, 18, 256);
 }
 
 /* Simple string functions */
