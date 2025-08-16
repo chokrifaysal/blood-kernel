@@ -38,6 +38,9 @@
 #include "drivers/security.h"
 #include "drivers/debug.h"
 #include "drivers/errata.h"
+#include "drivers/cpufreq.h"
+#include "drivers/ioapic.h"
+#include "drivers/cpuid_ext.h"
 
 extern void timer_delay(u32 ms);
 
@@ -58,6 +61,9 @@ static void vga_demo_task(void) {
     vga_puts("- IDT: 256 entries\n");
     vga_puts("- PIC: 8259A IRQ controller\n");
     vga_puts("- MMU: 4KB paging enabled\n");
+    vga_puts("- CPUFreq: SpeedStep/Cool'n'Quiet\n");
+    vga_puts("- IOAPIC: Advanced interrupt ctrl\n");
+    vga_puts("- CPUID: Extended feature detect\n");
     vga_puts("- Security: CET/SMEP/SMAP/MPX\n");
     vga_puts("- Debug: LBR/BTS branch tracing\n");
     vga_puts("- Errata: CPU bug workarounds\n");
@@ -1205,6 +1211,127 @@ static void errata_demo_task(void) {
     }
 }
 
+static void cpufreq_demo_task(void) {
+    vga_puts_at("CPU Frequency Scaling:", 20, 0, VGA_WHITE | (VGA_BLACK << 4));
+
+    if (cpufreq_is_supported()) {
+        const char* tech = cpufreq_is_intel_speedstep() ? "SpeedStep" :
+                          cpufreq_is_amd_coolnquiet() ? "Cool'n'Quiet" : "Unknown";
+
+        char tech_str[40];
+        sprintf(tech_str, "Technology: %s", tech);
+        vga_puts_at(tech_str, 21, 0, VGA_CYAN | (VGA_BLACK << 4));
+
+        u16 current_freq = cpufreq_get_current_frequency();
+        u16 base_freq = cpufreq_get_base_frequency();
+        u16 max_freq = cpufreq_get_max_turbo_frequency();
+
+        char freq_str[40];
+        sprintf(freq_str, "Freq: %uMHz/%uMHz/%uMHz", current_freq, base_freq, max_freq);
+        vga_puts_at(freq_str, 22, 0, VGA_YELLOW | (VGA_BLACK << 4));
+
+        u8 pstates = cpufreq_get_num_pstates();
+        u8 current_pstate = cpufreq_get_current_pstate();
+
+        char pstate_str[40];
+        sprintf(pstate_str, "P-states: %u/%u", current_pstate, pstates);
+        vga_puts_at(pstate_str, 23, 0, VGA_GREEN | (VGA_BLACK << 4));
+
+        if (cpufreq_is_turbo_supported()) {
+            const char* turbo_status = cpufreq_is_turbo_enabled() ? "Enabled" : "Disabled";
+            char turbo_str[40];
+            sprintf(turbo_str, "Turbo: %s", turbo_status);
+            vga_puts_at(turbo_str, 24, 0, VGA_LBLUE | (VGA_BLACK << 4));
+        }
+    } else {
+        vga_puts_at("CPU frequency scaling not supported", 21, 0, VGA_RED | (VGA_BLACK << 4));
+    }
+
+    while (1) {
+        timer_delay(3000);
+    }
+}
+
+static void ioapic_demo_task(void) {
+    vga_puts_at("IOAPIC Information:", 20, 40, VGA_WHITE | (VGA_BLACK << 4));
+
+    if (ioapic_is_initialized()) {
+        u8 num_controllers = ioapic_get_num_controllers();
+
+        char ctrl_str[40];
+        sprintf(ctrl_str, "Controllers: %u", num_controllers);
+        vga_puts_at(ctrl_str, 21, 40, VGA_CYAN | (VGA_BLACK << 4));
+
+        if (num_controllers > 0) {
+            u32 base = ioapic_get_controller_base(0);
+            u8 id = ioapic_get_controller_id(0);
+            u8 max_entries = ioapic_get_max_redirection_entries(0);
+
+            char base_str[40];
+            sprintf(base_str, "Base: %08X ID: %u", base, id);
+            vga_puts_at(base_str, 22, 40, VGA_YELLOW | (VGA_BLACK << 4));
+
+            char entries_str[40];
+            sprintf(entries_str, "Max entries: %u", max_entries);
+            vga_puts_at(entries_str, 23, 40, VGA_GREEN | (VGA_BLACK << 4));
+
+            u32 gsi_base = ioapic_get_gsi_base(0);
+            char gsi_str[40];
+            sprintf(gsi_str, "GSI base: %u", gsi_base);
+            vga_puts_at(gsi_str, 24, 40, VGA_LGRAY | (VGA_BLACK << 4));
+        }
+    } else {
+        vga_puts_at("IOAPIC not initialized", 21, 40, VGA_RED | (VGA_BLACK << 4));
+    }
+
+    while (1) {
+        timer_delay(4000);
+    }
+}
+
+static void cpuid_ext_demo_task(void) {
+    vga_set_cursor(12, 40);
+    vga_puts("Extended CPUID Features:\n");
+
+    const char* vendor = cpuid_ext_get_vendor_string();
+    const char* brand = cpuid_ext_get_brand_string();
+
+    char vendor_str[40];
+    sprintf(vendor_str, "Vendor: %.12s", vendor);
+    vga_puts_at(vendor_str, 13, 40, VGA_CYAN | (VGA_BLACK << 4));
+
+    /* Show first part of brand string */
+    char brand_str[40];
+    sprintf(brand_str, "%.30s", brand);
+    vga_puts_at(brand_str, 14, 40, VGA_YELLOW | (VGA_BLACK << 4));
+
+    u8 family = cpuid_ext_get_family();
+    u8 model = cpuid_ext_get_model();
+    u8 stepping = cpuid_ext_get_stepping();
+
+    char fms_str[40];
+    sprintf(fms_str, "F%02X M%02X S%02X", family, model, stepping);
+    vga_puts_at(fms_str, 15, 40, VGA_GREEN | (VGA_BLACK << 4));
+
+    u8 cache_line = cpuid_ext_get_cache_line_size();
+    u8 max_logical = cpuid_ext_get_max_logical_processors();
+
+    char cache_str[40];
+    sprintf(cache_str, "Cache: %uB Logical: %u", cache_line, max_logical);
+    vga_puts_at(cache_str, 16, 40, VGA_LBLUE | (VGA_BLACK << 4));
+
+    const cpuid_features_t* features = cpuid_ext_get_features();
+    char feat_str[40] = "Features: ";
+    if (features->avx) strcat(feat_str, "AVX ");
+    if (features->avx2) strcat(feat_str, "AVX2 ");
+    if (features->avx512f) strcat(feat_str, "AVX512");
+    vga_puts_at(feat_str, 17, 40, VGA_WHITE | (VGA_BLACK << 4));
+
+    while (1) {
+        timer_delay(5000);
+    }
+}
+
 static void system_info_task(void) {
     while (1) {
         /* Update system stats */
@@ -1236,30 +1363,33 @@ void x86_pc_demo_init(void) {
     task_create(serial_demo_task, 10, 256);
     task_create(floppy_demo_task, 11, 512);
     task_create(smbios_demo_task, 12, 256);
-    task_create(errata_demo_task, 13, 256);
-    task_create(numa_demo_task, 14, 256);
-    task_create(perfmon_demo_task, 15, 256);
-    task_create(x2apic_demo_task, 16, 256);
-    task_create(iommu_demo_task, 17, 256);
-    task_create(acpi_demo_task, 18, 256);
-    task_create(apic_demo_task, 19, 256);
-    task_create(usb_demo_task, 20, 256);
-    task_create(audio_demo_task, 21, 256);
-    task_create(network_demo_task, 22, 256);
-    task_create(dma_demo_task, 23, 256);
-    task_create(hpet_demo_task, 24, 256);
-    task_create(msr_demo_task, 25, 256);
-    task_create(thermal_demo_task, 26, 256);
-    task_create(power_demo_task, 27, 256);
-    task_create(cache_demo_task, 28, 256);
-    task_create(vmx_demo_task, 29, 256);
-    task_create(longmode_demo_task, 30, 256);
-    task_create(microcode_demo_task, 31, 256);
-    task_create(topology_demo_task, 32, 256);
-    task_create(xsave_demo_task, 33, 256);
-    task_create(security_demo_task, 34, 256);
-    task_create(debug_demo_task, 35, 256);
-    task_create(system_info_task, 36, 256);
+    task_create(cpuid_ext_demo_task, 13, 256);
+    task_create(errata_demo_task, 14, 256);
+    task_create(numa_demo_task, 15, 256);
+    task_create(perfmon_demo_task, 16, 256);
+    task_create(x2apic_demo_task, 17, 256);
+    task_create(iommu_demo_task, 18, 256);
+    task_create(acpi_demo_task, 19, 256);
+    task_create(apic_demo_task, 20, 256);
+    task_create(usb_demo_task, 21, 256);
+    task_create(audio_demo_task, 22, 256);
+    task_create(network_demo_task, 23, 256);
+    task_create(dma_demo_task, 24, 256);
+    task_create(hpet_demo_task, 25, 256);
+    task_create(msr_demo_task, 26, 256);
+    task_create(thermal_demo_task, 27, 256);
+    task_create(power_demo_task, 28, 256);
+    task_create(cache_demo_task, 29, 256);
+    task_create(vmx_demo_task, 30, 256);
+    task_create(longmode_demo_task, 31, 256);
+    task_create(microcode_demo_task, 32, 256);
+    task_create(topology_demo_task, 33, 256);
+    task_create(xsave_demo_task, 34, 256);
+    task_create(security_demo_task, 35, 256);
+    task_create(debug_demo_task, 36, 256);
+    task_create(cpufreq_demo_task, 37, 256);
+    task_create(ioapic_demo_task, 38, 256);
+    task_create(system_info_task, 39, 256);
 }
 
 /* Simple string functions */

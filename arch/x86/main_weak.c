@@ -6,7 +6,7 @@
 
 const char *arch_name(void) { return "x86-32"; }
 const char *mcu_name(void)  { return "QEMU-i686"; }
-const char *boot_name(void) { return "Security+Debug+Errata"; }
+const char *boot_name(void) { return "CPUFreq+IOAPIC+CPUID"; }
 
 void vga_init(void);
 void ps2_kbd_init(void);
@@ -44,6 +44,9 @@ void numa_init(void);
 void security_init(void);
 void debug_init(void);
 void errata_init(void);
+void cpufreq_init(void);
+void ioapic_init(void);
+void cpuid_ext_init(void);
 void x86_pc_demo_init(void);
 
 void clock_init(void) {
@@ -99,6 +102,12 @@ void clock_init(void) {
     /* Initialize debugging features */
     debug_init();
 
+    /* Initialize extended CPUID features */
+    cpuid_ext_init();
+
+    /* Initialize CPU frequency scaling */
+    cpufreq_init();
+
     /* Initialize ACPI */
     acpi_init();
 
@@ -122,6 +131,9 @@ void clock_init(void) {
         if (!x2apic_is_enabled()) {
             apic_init(lapic_base, 0xFEC00000); /* Standard I/O APIC address */
         }
+
+        /* Initialize IOAPIC */
+        ioapic_init();
 
         /* Initialize IOMMU if available */
         extern void* acpi_find_table(const char* signature);

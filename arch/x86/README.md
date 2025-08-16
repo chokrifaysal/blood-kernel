@@ -7,6 +7,9 @@
 - **PIC**: 8259A Programmable Interrupt Controller with IRQ management
 - **MMU**: 4KB page-based memory management with demand paging
 - **CPUID**: CPU identification and feature detection
+- **CPUFreq**: SpeedStep/Cool'n'Quiet frequency scaling
+- **IOAPIC**: I/O Advanced Programmable Interrupt Controller
+- **CPUID Ext**: Extended feature detection and management
 - **Security**: CET/SMEP/SMAP/MPX/PKU security features
 - **Debug**: LBR/BTS branch tracing and debugging
 - **Errata**: CPU bug detection and workarounds
@@ -171,6 +174,27 @@ qemu-system-x86_64 -kernel build/kernel.bin
 - Branch filtering and profiling
 - Single-step branch debugging
 - PMI freeze on debug events
+
+### CPU Frequency Scaling
+- Intel Enhanced SpeedStep support
+- AMD Cool'n'Quiet technology
+- P-state enumeration and control
+- Turbo boost management
+- Dynamic frequency adjustment
+
+### IOAPIC Management
+- Multiple IOAPIC controller support
+- ACPI MADT table parsing
+- GSI (Global System Interrupt) routing
+- Redirection table configuration
+- Legacy PIC replacement
+
+### Extended CPUID Features
+- Comprehensive feature detection
+- AVX/AVX-512/AMX instruction sets
+- Security feature enumeration
+- Cache topology information
+- Brand string and vendor identification
 
 ### CPU Errata Handling
 - Intel/AMD errata database
