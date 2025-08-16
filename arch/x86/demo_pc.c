@@ -29,6 +29,9 @@
 #include "drivers/cache.h"
 #include "drivers/vmx.h"
 #include "drivers/perfmon.h"
+#include "drivers/longmode.h"
+#include "drivers/microcode.h"
+#include "drivers/x2apic.h"
 
 extern void timer_delay(u32 ms);
 
@@ -49,6 +52,9 @@ static void vga_demo_task(void) {
     vga_puts("- IDT: 256 entries\n");
     vga_puts("- PIC: 8259A IRQ controller\n");
     vga_puts("- MMU: 4KB paging enabled\n");
+    vga_puts("- LongMode: x86-64 64-bit support\n");
+    vga_puts("- Microcode: CPU firmware updates\n");
+    vga_puts("- x2APIC: Advanced interrupt ctrl\n");
     vga_puts("- Cache: MTRR/PAT memory types\n");
     vga_puts("- VMX: Intel VT-x virtualization\n");
     vga_puts("- PerfMon: CPU performance counters\n");
@@ -865,6 +871,103 @@ static void perfmon_demo_task(void) {
     }
 }
 
+static void longmode_demo_task(void) {
+    if (longmode_is_supported()) {
+        vga_puts_at("LongMode: Supported", 20, 0, VGA_GREEN | (VGA_BLACK << 4));
+
+        if (longmode_is_enabled()) {
+            vga_puts_at("Status: Enabled", 21, 0, VGA_GREEN | (VGA_BLACK << 4));
+
+            char features[40] = "Features: ";
+            if (longmode_is_nx_supported()) strcat(features, "NX ");
+            if (longmode_is_syscall_supported()) strcat(features, "SYSCALL ");
+            if (longmode_is_pae_enabled()) strcat(features, "PAE");
+            vga_puts_at(features, 22, 0, VGA_CYAN | (VGA_BLACK << 4));
+
+            u64 efer = longmode_get_efer();
+            char efer_str[40];
+            sprintf(efer_str, "EFER: %08X%08X", (u32)(efer >> 32), (u32)efer);
+            vga_puts_at(efer_str, 23, 0, VGA_YELLOW | (VGA_BLACK << 4));
+        } else {
+            vga_puts_at("Status: Disabled", 21, 0, VGA_YELLOW | (VGA_BLACK << 4));
+        }
+    } else {
+        vga_puts_at("LongMode: Not supported", 20, 0, VGA_RED | (VGA_BLACK << 4));
+    }
+
+    while (1) {
+        timer_delay(3000);
+    }
+}
+
+static void microcode_demo_task(void) {
+    if (microcode_is_supported()) {
+        vga_puts_at("Microcode: Supported", 20, 40, VGA_GREEN | (VGA_BLACK << 4));
+
+        const char* vendor = microcode_is_intel() ? "Intel" :
+                           microcode_is_amd() ? "AMD" : "Unknown";
+        char vendor_str[40];
+        sprintf(vendor_str, "Vendor: %s", vendor);
+        vga_puts_at(vendor_str, 21, 40, VGA_CYAN | (VGA_BLACK << 4));
+
+        u32 revision = microcode_get_revision();
+        u32 signature = microcode_get_processor_signature();
+
+        char rev_str[40];
+        sprintf(rev_str, "Revision: %08X", revision);
+        vga_puts_at(rev_str, 22, 40, VGA_YELLOW | (VGA_BLACK << 4));
+
+        char sig_str[40];
+        sprintf(sig_str, "Signature: %08X", signature);
+        vga_puts_at(sig_str, 23, 40, VGA_LGRAY | (VGA_BLACK << 4));
+    } else {
+        vga_puts_at("Microcode: Not supported", 20, 40, VGA_RED | (VGA_BLACK << 4));
+    }
+
+    while (1) {
+        timer_delay(4000);
+    }
+}
+
+static void x2apic_demo_task(void) {
+    vga_set_cursor(12, 40);
+    vga_puts("x2APIC Information:\n");
+
+    if (x2apic_is_supported()) {
+        char support_str[40];
+        sprintf(support_str, "Supported: Yes");
+        vga_puts_at(support_str, 13, 40, VGA_GREEN | (VGA_BLACK << 4));
+
+        if (x2apic_is_enabled()) {
+            vga_puts_at("Status: Enabled", 14, 40, VGA_GREEN | (VGA_BLACK << 4));
+
+            u32 apic_id = x2apic_get_id();
+            u32 version = x2apic_get_version();
+            u32 max_lvt = x2apic_get_max_lvt_entries();
+
+            char id_str[40];
+            sprintf(id_str, "ID: %08X Ver: %u", apic_id, version);
+            vga_puts_at(id_str, 15, 40, VGA_CYAN | (VGA_BLACK << 4));
+
+            char lvt_str[40];
+            sprintf(lvt_str, "Max LVT: %u", max_lvt);
+            vga_puts_at(lvt_str, 16, 40, VGA_YELLOW | (VGA_BLACK << 4));
+
+            if (x2apic_supports_eoi_broadcast_suppression()) {
+                vga_puts_at("EOI Broadcast: Suppressed", 17, 40, VGA_LBLUE | (VGA_BLACK << 4));
+            }
+        } else {
+            vga_puts_at("Status: Disabled", 14, 40, VGA_YELLOW | (VGA_BLACK << 4));
+        }
+    } else {
+        vga_puts_at("x2APIC: Not supported", 13, 40, VGA_RED | (VGA_BLACK << 4));
+    }
+
+    while (1) {
+        timer_delay(5000);
+    }
+}
+
 static void system_info_task(void) {
     while (1) {
         /* Update system stats */
@@ -897,20 +1000,23 @@ void x86_pc_demo_init(void) {
     task_create(floppy_demo_task, 11, 512);
     task_create(smbios_demo_task, 12, 256);
     task_create(perfmon_demo_task, 13, 256);
-    task_create(iommu_demo_task, 14, 256);
-    task_create(acpi_demo_task, 15, 256);
-    task_create(apic_demo_task, 16, 256);
-    task_create(usb_demo_task, 17, 256);
-    task_create(audio_demo_task, 18, 256);
-    task_create(network_demo_task, 19, 256);
-    task_create(dma_demo_task, 20, 256);
-    task_create(hpet_demo_task, 21, 256);
-    task_create(msr_demo_task, 22, 256);
-    task_create(thermal_demo_task, 23, 256);
-    task_create(power_demo_task, 24, 256);
-    task_create(cache_demo_task, 25, 256);
-    task_create(vmx_demo_task, 26, 256);
-    task_create(system_info_task, 27, 256);
+    task_create(x2apic_demo_task, 14, 256);
+    task_create(iommu_demo_task, 15, 256);
+    task_create(acpi_demo_task, 16, 256);
+    task_create(apic_demo_task, 17, 256);
+    task_create(usb_demo_task, 18, 256);
+    task_create(audio_demo_task, 19, 256);
+    task_create(network_demo_task, 20, 256);
+    task_create(dma_demo_task, 21, 256);
+    task_create(hpet_demo_task, 22, 256);
+    task_create(msr_demo_task, 23, 256);
+    task_create(thermal_demo_task, 24, 256);
+    task_create(power_demo_task, 25, 256);
+    task_create(cache_demo_task, 26, 256);
+    task_create(vmx_demo_task, 27, 256);
+    task_create(longmode_demo_task, 28, 256);
+    task_create(microcode_demo_task, 29, 256);
+    task_create(system_info_task, 30, 256);
 }
 
 /* Simple string functions */

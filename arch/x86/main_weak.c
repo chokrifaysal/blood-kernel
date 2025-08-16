@@ -6,7 +6,7 @@
 
 const char *arch_name(void) { return "x86-32"; }
 const char *mcu_name(void)  { return "QEMU-i686"; }
-const char *boot_name(void) { return "Cache+VMX+PerfMon"; }
+const char *boot_name(void) { return "LongMode+Microcode+x2APIC"; }
 
 void vga_init(void);
 void ps2_kbd_init(void);
@@ -35,6 +35,9 @@ void iommu_init(void);
 void cache_init(void);
 void vmx_init(void);
 void perfmon_init(void);
+void longmode_init(void);
+void microcode_init(void);
+void x2apic_init(void);
 void x86_pc_demo_init(void);
 
 void clock_init(void) {
@@ -69,6 +72,12 @@ void clock_init(void) {
     /* Initialize performance monitoring */
     perfmon_init();
 
+    /* Initialize long mode support */
+    longmode_init();
+
+    /* Initialize microcode updates */
+    microcode_init();
+
     /* Initialize ACPI */
     acpi_init();
 
@@ -86,7 +95,12 @@ void clock_init(void) {
 
     if (acpi_is_available()) {
         u32 lapic_base = acpi_get_local_apic_base();
-        apic_init(lapic_base, 0xFEC00000); /* Standard I/O APIC address */
+
+        /* Try x2APIC first, fallback to xAPIC */
+        x2apic_init();
+        if (!x2apic_is_enabled()) {
+            apic_init(lapic_base, 0xFEC00000); /* Standard I/O APIC address */
+        }
 
         /* Initialize IOMMU if available */
         extern void* acpi_find_table(const char* signature);

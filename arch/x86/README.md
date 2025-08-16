@@ -7,6 +7,9 @@
 - **PIC**: 8259A Programmable Interrupt Controller with IRQ management
 - **MMU**: 4KB page-based memory management with demand paging
 - **CPUID**: CPU identification and feature detection
+- **LongMode**: x86-64 64-bit support with PAE and NX
+- **Microcode**: CPU firmware update support for Intel/AMD
+- **x2APIC**: Advanced interrupt controller with MSR interface
 - **Cache**: MTRR/PAT memory type and cache control
 - **VMX**: Intel VT-x virtualization with VMCS support
 - **PerfMon**: CPU performance counters and profiling
@@ -120,6 +123,27 @@ qemu-system-x86_64 -kernel build/kernel.bin
 - EPT (Extended Page Tables) support
 - VPID (Virtual Processor ID) support
 - VM entry/exit control and monitoring
+
+### Long Mode Support
+- x86-64 64-bit architecture support
+- 4-level page table management (PML4/PDPT/PD/PT)
+- NX (No-Execute) bit support
+- SYSCALL/SYSRET fast system calls
+- SMEP/SMAP security features
+
+### Microcode Updates
+- Intel and AMD microcode support
+- Microcode validation and verification
+- Runtime microcode application
+- Processor signature matching
+- Revision tracking and management
+
+### x2APIC Controller
+- MSR-based APIC interface
+- 32-bit APIC ID support
+- IPI (Inter-Processor Interrupt) delivery
+- Local timer with calibration
+- EOI broadcast suppression
 
 ### Performance Monitoring
 - Programmable performance counters
