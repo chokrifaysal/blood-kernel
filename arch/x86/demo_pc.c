@@ -35,6 +35,9 @@
 #include "drivers/topology.h"
 #include "drivers/xsave.h"
 #include "drivers/numa.h"
+#include "drivers/security.h"
+#include "drivers/debug.h"
+#include "drivers/errata.h"
 
 extern void timer_delay(u32 ms);
 
@@ -55,6 +58,9 @@ static void vga_demo_task(void) {
     vga_puts("- IDT: 256 entries\n");
     vga_puts("- PIC: 8259A IRQ controller\n");
     vga_puts("- MMU: 4KB paging enabled\n");
+    vga_puts("- Security: CET/SMEP/SMAP/MPX\n");
+    vga_puts("- Debug: LBR/BTS branch tracing\n");
+    vga_puts("- Errata: CPU bug workarounds\n");
     vga_puts("- Topology: CPU/NUMA detection\n");
     vga_puts("- XSAVE: Extended state mgmt\n");
     vga_puts("- NUMA: Memory affinity control\n");
@@ -1086,6 +1092,119 @@ static void numa_demo_task(void) {
     }
 }
 
+static void security_demo_task(void) {
+    vga_puts_at("Security Features:", 20, 0, VGA_WHITE | (VGA_BLACK << 4));
+
+    char features[40] = "Features: ";
+    if (security_is_smep_supported()) strcat(features, "SMEP ");
+    if (security_is_smap_supported()) strcat(features, "SMAP ");
+    if (security_is_cet_supported()) strcat(features, "CET ");
+    if (security_is_mpx_supported()) strcat(features, "MPX ");
+    if (security_is_pku_supported()) strcat(features, "PKU");
+    vga_puts_at(features, 21, 0, VGA_CYAN | (VGA_BLACK << 4));
+
+    char enabled[40] = "Enabled: ";
+    if (security_is_smep_enabled()) strcat(enabled, "SMEP ");
+    if (security_is_smap_enabled()) strcat(enabled, "SMAP ");
+    if (security_is_cet_enabled()) strcat(enabled, "CET ");
+    if (security_is_mpx_enabled()) strcat(enabled, "MPX ");
+    if (security_is_pku_enabled()) strcat(enabled, "PKU");
+    vga_puts_at(enabled, 22, 0, VGA_GREEN | (VGA_BLACK << 4));
+
+    if (security_is_cet_supported()) {
+        char cet_info[40] = "CET: ";
+        if (security_is_shadow_stack_supported()) strcat(cet_info, "SS ");
+        if (security_is_ibt_supported()) strcat(cet_info, "IBT");
+        vga_puts_at(cet_info, 23, 0, VGA_YELLOW | (VGA_BLACK << 4));
+    }
+
+    while (1) {
+        timer_delay(3000);
+    }
+}
+
+static void debug_demo_task(void) {
+    vga_puts_at("Debug Features:", 20, 40, VGA_WHITE | (VGA_BLACK << 4));
+
+    if (debug_is_lbr_supported()) {
+        u8 depth = debug_get_lbr_depth();
+        u8 format = debug_get_lbr_format();
+
+        char lbr_str[40];
+        sprintf(lbr_str, "LBR: Depth %u Format %u", depth, format);
+        vga_puts_at(lbr_str, 21, 40, VGA_CYAN | (VGA_BLACK << 4));
+
+        if (debug_is_lbr_enabled()) {
+            vga_puts_at("LBR: Enabled", 22, 40, VGA_GREEN | (VGA_BLACK << 4));
+        } else {
+            vga_puts_at("LBR: Disabled", 22, 40, VGA_YELLOW | (VGA_BLACK << 4));
+        }
+    } else {
+        vga_puts_at("LBR: Not supported", 21, 40, VGA_RED | (VGA_BLACK << 4));
+    }
+
+    if (debug_is_bts_supported()) {
+        u32 buffer_size = debug_get_bts_buffer_size();
+
+        char bts_str[40];
+        sprintf(bts_str, "BTS: Buffer %u entries", buffer_size);
+        vga_puts_at(bts_str, 23, 40, VGA_LBLUE | (VGA_BLACK << 4));
+    } else {
+        vga_puts_at("BTS: Not supported", 23, 40, VGA_RED | (VGA_BLACK << 4));
+    }
+
+    while (1) {
+        timer_delay(4000);
+    }
+}
+
+static void errata_demo_task(void) {
+    vga_set_cursor(12, 0);
+    vga_puts("CPU Errata Information:\n");
+
+    u32 signature = errata_get_cpu_signature();
+    u32 family = errata_get_family();
+    u32 model = errata_get_model();
+    u32 stepping = errata_get_stepping();
+
+    char cpu_str[40];
+    sprintf(cpu_str, "CPU: F%02X M%02X S%02X", family, model, stepping);
+    vga_puts_at(cpu_str, 13, 0, VGA_CYAN | (VGA_BLACK << 4));
+
+    char sig_str[40];
+    sprintf(sig_str, "Signature: %08X", signature);
+    vga_puts_at(sig_str, 14, 0, VGA_YELLOW | (VGA_BLACK << 4));
+
+    const char* vendor = errata_is_intel() ? "Intel" :
+                        errata_is_amd() ? "AMD" : "Unknown";
+    char vendor_str[40];
+    sprintf(vendor_str, "Vendor: %s", vendor);
+    vga_puts_at(vendor_str, 15, 0, VGA_LGRAY | (VGA_BLACK << 4));
+
+    u32 errata_count = errata_get_active_count();
+    char count_str[40];
+    sprintf(count_str, "Active errata: %u", errata_count);
+    vga_puts_at(count_str, 16, 0, VGA_GREEN | (VGA_BLACK << 4));
+
+    if (errata_count > 0) {
+        u16 first_id = errata_get_active_id(0);
+        const char* desc = errata_get_description(first_id);
+
+        char first_str[40];
+        sprintf(first_str, "First: %u", first_id);
+        vga_puts_at(first_str, 17, 0, VGA_LBLUE | (VGA_BLACK << 4));
+
+        /* Show first few characters of description */
+        char desc_str[40];
+        sprintf(desc_str, "%.30s", desc);
+        vga_puts_at(desc_str, 18, 0, VGA_WHITE | (VGA_BLACK << 4));
+    }
+
+    while (1) {
+        timer_delay(5000);
+    }
+}
+
 static void system_info_task(void) {
     while (1) {
         /* Update system stats */
@@ -1117,27 +1236,30 @@ void x86_pc_demo_init(void) {
     task_create(serial_demo_task, 10, 256);
     task_create(floppy_demo_task, 11, 512);
     task_create(smbios_demo_task, 12, 256);
-    task_create(numa_demo_task, 13, 256);
-    task_create(perfmon_demo_task, 14, 256);
-    task_create(x2apic_demo_task, 15, 256);
-    task_create(iommu_demo_task, 16, 256);
-    task_create(acpi_demo_task, 17, 256);
-    task_create(apic_demo_task, 18, 256);
-    task_create(usb_demo_task, 19, 256);
-    task_create(audio_demo_task, 20, 256);
-    task_create(network_demo_task, 21, 256);
-    task_create(dma_demo_task, 22, 256);
-    task_create(hpet_demo_task, 23, 256);
-    task_create(msr_demo_task, 24, 256);
-    task_create(thermal_demo_task, 25, 256);
-    task_create(power_demo_task, 26, 256);
-    task_create(cache_demo_task, 27, 256);
-    task_create(vmx_demo_task, 28, 256);
-    task_create(longmode_demo_task, 29, 256);
-    task_create(microcode_demo_task, 30, 256);
-    task_create(topology_demo_task, 31, 256);
-    task_create(xsave_demo_task, 32, 256);
-    task_create(system_info_task, 33, 256);
+    task_create(errata_demo_task, 13, 256);
+    task_create(numa_demo_task, 14, 256);
+    task_create(perfmon_demo_task, 15, 256);
+    task_create(x2apic_demo_task, 16, 256);
+    task_create(iommu_demo_task, 17, 256);
+    task_create(acpi_demo_task, 18, 256);
+    task_create(apic_demo_task, 19, 256);
+    task_create(usb_demo_task, 20, 256);
+    task_create(audio_demo_task, 21, 256);
+    task_create(network_demo_task, 22, 256);
+    task_create(dma_demo_task, 23, 256);
+    task_create(hpet_demo_task, 24, 256);
+    task_create(msr_demo_task, 25, 256);
+    task_create(thermal_demo_task, 26, 256);
+    task_create(power_demo_task, 27, 256);
+    task_create(cache_demo_task, 28, 256);
+    task_create(vmx_demo_task, 29, 256);
+    task_create(longmode_demo_task, 30, 256);
+    task_create(microcode_demo_task, 31, 256);
+    task_create(topology_demo_task, 32, 256);
+    task_create(xsave_demo_task, 33, 256);
+    task_create(security_demo_task, 34, 256);
+    task_create(debug_demo_task, 35, 256);
+    task_create(system_info_task, 36, 256);
 }
 
 /* Simple string functions */

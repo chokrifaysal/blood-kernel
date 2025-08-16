@@ -6,7 +6,7 @@
 
 const char *arch_name(void) { return "x86-32"; }
 const char *mcu_name(void)  { return "QEMU-i686"; }
-const char *boot_name(void) { return "Topology+XSAVE+NUMA"; }
+const char *boot_name(void) { return "Security+Debug+Errata"; }
 
 void vga_init(void);
 void ps2_kbd_init(void);
@@ -41,6 +41,9 @@ void x2apic_init(void);
 void topology_init(void);
 void xsave_init(void);
 void numa_init(void);
+void security_init(void);
+void debug_init(void);
+void errata_init(void);
 void x86_pc_demo_init(void);
 
 void clock_init(void) {
@@ -86,6 +89,15 @@ void clock_init(void) {
 
     /* Initialize XSAVE state management */
     xsave_init();
+
+    /* Initialize CPU errata handling */
+    errata_init();
+
+    /* Initialize security features */
+    security_init();
+
+    /* Initialize debugging features */
+    debug_init();
 
     /* Initialize ACPI */
     acpi_init();

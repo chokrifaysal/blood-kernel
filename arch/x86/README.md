@@ -7,6 +7,9 @@
 - **PIC**: 8259A Programmable Interrupt Controller with IRQ management
 - **MMU**: 4KB page-based memory management with demand paging
 - **CPUID**: CPU identification and feature detection
+- **Security**: CET/SMEP/SMAP/MPX/PKU security features
+- **Debug**: LBR/BTS branch tracing and debugging
+- **Errata**: CPU bug detection and workarounds
 - **Topology**: CPU/NUMA topology detection and enumeration
 - **XSAVE**: Extended state management for AVX/AVX-512/MPX
 - **NUMA**: Memory affinity and allocation policies
@@ -154,6 +157,27 @@ qemu-system-x86_64 -kernel build/kernel.bin
 - MPX bound register management
 - Feature-specific state areas
 - Supervisor state handling
+
+### CPU Security Features
+- SMEP/SMAP supervisor mode protection
+- CET (Control Flow Enforcement Technology)
+- Shadow stack and indirect branch tracking
+- MPX (Memory Protection Extensions)
+- PKU (Protection Key for Userspace)
+
+### Advanced Debugging
+- LBR (Last Branch Record) stack
+- BTS (Branch Trace Store) buffer
+- Branch filtering and profiling
+- Single-step branch debugging
+- PMI freeze on debug events
+
+### CPU Errata Handling
+- Intel/AMD errata database
+- Automatic workaround application
+- Spectre/Meltdown mitigations
+- L1TF/MDS/SRBDS protections
+- Security vulnerability detection
 
 ### NUMA Memory Management
 - SRAT/SLIT ACPI table parsing
