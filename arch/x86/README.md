@@ -7,6 +7,9 @@
 - **PIC**: 8259A Programmable Interrupt Controller with IRQ management
 - **MMU**: 4KB page-based memory management with demand paging
 - **CPUID**: CPU identification and feature detection
+- **Topology**: CPU/NUMA topology detection and enumeration
+- **XSAVE**: Extended state management for AVX/AVX-512/MPX
+- **NUMA**: Memory affinity and allocation policies
 - **LongMode**: x86-64 64-bit support with PAE and NX
 - **Microcode**: CPU firmware update support for Intel/AMD
 - **x2APIC**: Advanced interrupt controller with MSR interface
@@ -137,6 +140,27 @@ qemu-system-x86_64 -kernel build/kernel.bin
 - Runtime microcode application
 - Processor signature matching
 - Revision tracking and management
+
+### CPU Topology Detection
+- CPUID-based topology enumeration
+- Package/die/core/thread hierarchy
+- Cache sharing level detection
+- NUMA node assignment
+- x2APIC ID extraction and parsing
+
+### Extended State Management
+- XSAVE/XRSTOR instruction support
+- AVX/AVX-512 state preservation
+- MPX bound register management
+- Feature-specific state areas
+- Supervisor state handling
+
+### NUMA Memory Management
+- SRAT/SLIT ACPI table parsing
+- Memory affinity policies
+- Distance-based allocation
+- Node-specific memory pools
+- Page migration support
 
 ### x2APIC Controller
 - MSR-based APIC interface

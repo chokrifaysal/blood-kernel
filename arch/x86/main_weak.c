@@ -6,7 +6,7 @@
 
 const char *arch_name(void) { return "x86-32"; }
 const char *mcu_name(void)  { return "QEMU-i686"; }
-const char *boot_name(void) { return "LongMode+Microcode+x2APIC"; }
+const char *boot_name(void) { return "Topology+XSAVE+NUMA"; }
 
 void vga_init(void);
 void ps2_kbd_init(void);
@@ -38,6 +38,9 @@ void perfmon_init(void);
 void longmode_init(void);
 void microcode_init(void);
 void x2apic_init(void);
+void topology_init(void);
+void xsave_init(void);
+void numa_init(void);
 void x86_pc_demo_init(void);
 
 void clock_init(void) {
@@ -78,6 +81,12 @@ void clock_init(void) {
     /* Initialize microcode updates */
     microcode_init();
 
+    /* Initialize CPU topology */
+    topology_init();
+
+    /* Initialize XSAVE state management */
+    xsave_init();
+
     /* Initialize ACPI */
     acpi_init();
 
@@ -111,6 +120,9 @@ void clock_init(void) {
             iommu_add_unit(0xFED90000, 0, 0, 255, 0); /* Standard IOMMU address */
             iommu_init();
         }
+
+        /* Initialize NUMA after ACPI */
+        numa_init();
     }
 
     /* Initialize hardware */
