@@ -44,6 +44,9 @@
 #include "drivers/cache_mgmt.h"
 #include "drivers/memory_mgmt.h"
 #include "drivers/cpu_features.h"
+#include "drivers/simd.h"
+#include "drivers/interrupt_mgmt.h"
+#include "drivers/atomic.h"
 
 extern void timer_delay(u32 ms);
 
@@ -64,6 +67,9 @@ static void vga_demo_task(void) {
     vga_puts("- IDT: 256 entries\n");
     vga_puts("- PIC: 8259A IRQ controller\n");
     vga_puts("- MMU: 4KB paging enabled\n");
+    vga_puts("- SIMD: SSE/AVX optimization\n");
+    vga_puts("- Interrupt: NMI/SMI/MCE mgmt\n");
+    vga_puts("- Atomic: Sync primitives\n");
     vga_puts("- Cache: L1/L2/L3 management\n");
     vga_puts("- Memory: PAT/MTRR extensions\n");
     vga_puts("- Features: CPU control/config\n");
@@ -1467,6 +1473,128 @@ static void cpu_features_demo_task(void) {
     }
 }
 
+static void simd_demo_task(void) {
+    vga_puts_at("SIMD Optimization:", 20, 0, VGA_WHITE | (VGA_BLACK << 4));
+
+    if (simd_is_optimization_enabled()) {
+        u32 vector_width = simd_get_vector_width();
+
+        char width_str[40];
+        sprintf(width_str, "Vector width: %u bits", vector_width * 8);
+        vga_puts_at(width_str, 21, 0, VGA_CYAN | (VGA_BLACK << 4));
+
+        char support_str[40] = "Support: ";
+        if (simd_is_supported(SIMD_SSE)) strcat(support_str, "SSE ");
+        if (simd_is_supported(SIMD_SSE2)) strcat(support_str, "SSE2 ");
+        if (simd_is_supported(SIMD_AVX)) strcat(support_str, "AVX ");
+        if (simd_is_supported(SIMD_AVX2)) strcat(support_str, "AVX2");
+        vga_puts_at(support_str, 22, 0, VGA_YELLOW | (VGA_BLACK << 4));
+
+        char enabled_str[40] = "Enabled: ";
+        if (simd_is_enabled(SIMD_SSE)) strcat(enabled_str, "SSE ");
+        if (simd_is_enabled(SIMD_AVX)) strcat(enabled_str, "AVX ");
+        if (simd_is_enabled(SIMD_AVX512F)) strcat(enabled_str, "AVX512 ");
+        if (simd_is_enabled(SIMD_FMA)) strcat(enabled_str, "FMA");
+        vga_puts_at(enabled_str, 23, 0, VGA_GREEN | (VGA_BLACK << 4));
+
+        u32 state_size = simd_get_state_size();
+        char state_str[40];
+        sprintf(state_str, "State size: %u bytes", state_size);
+        vga_puts_at(state_str, 24, 0, VGA_LBLUE | (VGA_BLACK << 4));
+    } else {
+        vga_puts_at("SIMD optimization not available", 21, 0, VGA_RED | (VGA_BLACK << 4));
+    }
+
+    while (1) {
+        timer_delay(3000);
+    }
+}
+
+static void interrupt_mgmt_demo_task(void) {
+    vga_puts_at("Interrupt Management:", 20, 40, VGA_WHITE | (VGA_BLACK << 4));
+
+    char support_str[40] = "Support: ";
+    if (interrupt_mgmt_is_nmi_supported()) strcat(support_str, "NMI ");
+    if (interrupt_mgmt_is_smi_supported()) strcat(support_str, "SMI ");
+    if (interrupt_mgmt_is_mce_supported()) strcat(support_str, "MCE ");
+    if (interrupt_mgmt_is_thermal_interrupt_supported()) strcat(support_str, "THM");
+    vga_puts_at(support_str, 21, 40, VGA_CYAN | (VGA_BLACK << 4));
+
+    u32 nmi_count = interrupt_mgmt_get_nmi_count();
+    u32 mce_count = interrupt_mgmt_get_mce_count();
+
+    char counts_str[40];
+    sprintf(counts_str, "NMI: %u MCE: %u", nmi_count, mce_count);
+    vga_puts_at(counts_str, 22, 40, VGA_YELLOW | (VGA_BLACK << 4));
+
+    if (interrupt_mgmt_is_mce_supported()) {
+        u32 mce_banks = interrupt_mgmt_get_mce_bank_count();
+        char banks_str[40];
+        sprintf(banks_str, "MCE banks: %u", mce_banks);
+        vga_puts_at(banks_str, 23, 40, VGA_GREEN | (VGA_BLACK << 4));
+    }
+
+    u8 nesting = interrupt_mgmt_get_nesting_level();
+    u32 last_vector = interrupt_mgmt_get_last_vector();
+
+    char nest_str[40];
+    sprintf(nest_str, "Nest: %u Last: %u", nesting, last_vector);
+    vga_puts_at(nest_str, 24, 40, VGA_LGRAY | (VGA_BLACK << 4));
+
+    while (1) {
+        timer_delay(4000);
+    }
+}
+
+static void atomic_demo_task(void) {
+    vga_set_cursor(12, 0);
+    vga_puts("Atomic Operations:\n");
+
+    if (atomic_is_supported()) {
+        u8 smp = atomic_is_smp_system();
+        u32 cpu_count = atomic_get_cpu_count();
+        u32 cache_line = atomic_get_cache_line_size();
+
+        char system_str[40];
+        sprintf(system_str, "System: %s CPUs: %u", smp ? "SMP" : "UP", cpu_count);
+        vga_puts_at(system_str, 13, 0, VGA_CYAN | (VGA_BLACK << 4));
+
+        char cache_str[40];
+        sprintf(cache_str, "Cache line: %u bytes", cache_line);
+        vga_puts_at(cache_str, 14, 0, VGA_YELLOW | (VGA_BLACK << 4));
+
+        /* Test atomic operations */
+        static volatile u32 test_counter = 0;
+        u32 old_value = atomic_inc_u32(&test_counter);
+
+        char test_str[40];
+        sprintf(test_str, "Test counter: %u", old_value);
+        vga_puts_at(test_str, 15, 0, VGA_GREEN | (VGA_BLACK << 4));
+
+        /* Test spinlock */
+        static atomic_spinlock_t test_lock;
+        static u8 lock_initialized = 0;
+
+        if (!lock_initialized) {
+            atomic_spinlock_init(&test_lock);
+            lock_initialized = 1;
+        }
+
+        u8 locked = atomic_spinlock_is_locked(&test_lock);
+        char lock_str[40];
+        sprintf(lock_str, "Spinlock: %s", locked ? "Locked" : "Free");
+        vga_puts_at(lock_str, 16, 0, VGA_LBLUE | (VGA_BLACK << 4));
+
+        vga_puts_at("Features: CAS, XCHG, LOCK", 17, 0, VGA_WHITE | (VGA_BLACK << 4));
+    } else {
+        vga_puts_at("Atomic operations not supported", 13, 0, VGA_RED | (VGA_BLACK << 4));
+    }
+
+    while (1) {
+        timer_delay(5000);
+    }
+}
+
 static void system_info_task(void) {
     while (1) {
         /* Update system stats */
@@ -1498,36 +1626,39 @@ void x86_pc_demo_init(void) {
     task_create(serial_demo_task, 10, 256);
     task_create(floppy_demo_task, 11, 512);
     task_create(smbios_demo_task, 12, 256);
-    task_create(cpu_features_demo_task, 13, 256);
-    task_create(cpuid_ext_demo_task, 14, 256);
-    task_create(errata_demo_task, 15, 256);
-    task_create(numa_demo_task, 16, 256);
-    task_create(perfmon_demo_task, 17, 256);
-    task_create(x2apic_demo_task, 18, 256);
-    task_create(iommu_demo_task, 19, 256);
-    task_create(acpi_demo_task, 20, 256);
-    task_create(apic_demo_task, 21, 256);
-    task_create(usb_demo_task, 22, 256);
-    task_create(audio_demo_task, 23, 256);
-    task_create(network_demo_task, 24, 256);
-    task_create(dma_demo_task, 25, 256);
-    task_create(hpet_demo_task, 26, 256);
-    task_create(msr_demo_task, 27, 256);
-    task_create(thermal_demo_task, 28, 256);
-    task_create(power_demo_task, 29, 256);
-    task_create(cache_demo_task, 30, 256);
-    task_create(vmx_demo_task, 31, 256);
-    task_create(longmode_demo_task, 32, 256);
-    task_create(microcode_demo_task, 33, 256);
-    task_create(topology_demo_task, 34, 256);
-    task_create(xsave_demo_task, 35, 256);
-    task_create(security_demo_task, 36, 256);
-    task_create(debug_demo_task, 37, 256);
-    task_create(cpufreq_demo_task, 38, 256);
-    task_create(ioapic_demo_task, 39, 256);
-    task_create(cache_mgmt_demo_task, 40, 256);
-    task_create(memory_mgmt_demo_task, 41, 256);
-    task_create(system_info_task, 42, 256);
+    task_create(atomic_demo_task, 13, 256);
+    task_create(cpu_features_demo_task, 14, 256);
+    task_create(cpuid_ext_demo_task, 15, 256);
+    task_create(errata_demo_task, 16, 256);
+    task_create(numa_demo_task, 17, 256);
+    task_create(perfmon_demo_task, 18, 256);
+    task_create(x2apic_demo_task, 19, 256);
+    task_create(iommu_demo_task, 20, 256);
+    task_create(acpi_demo_task, 21, 256);
+    task_create(apic_demo_task, 22, 256);
+    task_create(usb_demo_task, 23, 256);
+    task_create(audio_demo_task, 24, 256);
+    task_create(network_demo_task, 25, 256);
+    task_create(dma_demo_task, 26, 256);
+    task_create(hpet_demo_task, 27, 256);
+    task_create(msr_demo_task, 28, 256);
+    task_create(thermal_demo_task, 29, 256);
+    task_create(power_demo_task, 30, 256);
+    task_create(cache_demo_task, 31, 256);
+    task_create(vmx_demo_task, 32, 256);
+    task_create(longmode_demo_task, 33, 256);
+    task_create(microcode_demo_task, 34, 256);
+    task_create(topology_demo_task, 35, 256);
+    task_create(xsave_demo_task, 36, 256);
+    task_create(security_demo_task, 37, 256);
+    task_create(debug_demo_task, 38, 256);
+    task_create(cpufreq_demo_task, 39, 256);
+    task_create(ioapic_demo_task, 40, 256);
+    task_create(cache_mgmt_demo_task, 41, 256);
+    task_create(memory_mgmt_demo_task, 42, 256);
+    task_create(simd_demo_task, 43, 256);
+    task_create(interrupt_mgmt_demo_task, 44, 256);
+    task_create(system_info_task, 45, 256);
 }
 
 /* Simple string functions */
