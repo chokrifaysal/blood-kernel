@@ -47,6 +47,9 @@
 #include "drivers/simd.h"
 #include "drivers/interrupt_mgmt.h"
 #include "drivers/atomic.h"
+#include "drivers/power_mgmt.h"
+#include "drivers/memory_protection.h"
+#include "drivers/virt_ext.h"
 
 extern void timer_delay(u32 ms);
 
@@ -67,6 +70,9 @@ static void vga_demo_task(void) {
     vga_puts("- IDT: 256 entries\n");
     vga_puts("- PIC: 8259A IRQ controller\n");
     vga_puts("- MMU: 4KB paging enabled\n");
+    vga_puts("- Power: C-states/P-states mgmt\n");
+    vga_puts("- Protection: SMEP/SMAP/CET\n");
+    vga_puts("- Virtualization: VT-x/EPT\n");
     vga_puts("- SIMD: SSE/AVX optimization\n");
     vga_puts("- Interrupt: NMI/SMI/MCE mgmt\n");
     vga_puts("- Atomic: Sync primitives\n");
@@ -1595,6 +1601,139 @@ static void atomic_demo_task(void) {
     }
 }
 
+static void power_mgmt_demo_task(void) {
+    vga_puts_at("Power Management:", 20, 0, VGA_WHITE | (VGA_BLACK << 4));
+
+    if (power_mgmt_is_supported()) {
+        u8 cstate_support = power_mgmt_is_cstate_supported();
+        u8 energy_support = power_mgmt_is_energy_monitoring_supported();
+
+        char support_str[40];
+        sprintf(support_str, "Support: %s %s",
+                cstate_support ? "C-states" : "",
+                energy_support ? "Energy" : "");
+        vga_puts_at(support_str, 21, 0, VGA_CYAN | (VGA_BLACK << 4));
+
+        if (cstate_support) {
+            u8 num_cstates = power_mgmt_get_num_cstates();
+            u8 deepest = power_mgmt_get_deepest_cstate();
+            u8 current = power_mgmt_get_current_cstate();
+
+            char cstate_str[40];
+            sprintf(cstate_str, "C-states: %u/%u Current: C%u", num_cstates, deepest, current);
+            vga_puts_at(cstate_str, 22, 0, VGA_YELLOW | (VGA_BLACK << 4));
+        }
+
+        if (energy_support) {
+            u32 current_power = power_mgmt_get_current_power();
+            u32 tdp = power_mgmt_get_thermal_design_power();
+
+            char power_str[40];
+            sprintf(power_str, "Power: %uW TDP: %uW", current_power, tdp);
+            vga_puts_at(power_str, 23, 0, VGA_GREEN | (VGA_BLACK << 4));
+        }
+
+        u8 pkg_cstates = power_mgmt_are_package_cstates_enabled();
+        char pkg_str[40];
+        sprintf(pkg_str, "Package C-states: %s", pkg_cstates ? "Enabled" : "Disabled");
+        vga_puts_at(pkg_str, 24, 0, VGA_LBLUE | (VGA_BLACK << 4));
+    } else {
+        vga_puts_at("Power management not supported", 21, 0, VGA_RED | (VGA_BLACK << 4));
+    }
+
+    while (1) {
+        timer_delay(3000);
+    }
+}
+
+static void memory_protection_demo_task(void) {
+    vga_puts_at("Memory Protection:", 20, 40, VGA_WHITE | (VGA_BLACK << 4));
+
+    if (memory_protection_is_supported()) {
+        char support_str[40] = "Support: ";
+        if (memory_protection_is_smep_supported()) strcat(support_str, "SMEP ");
+        if (memory_protection_is_smap_supported()) strcat(support_str, "SMAP ");
+        if (memory_protection_is_pku_supported()) strcat(support_str, "PKU ");
+        if (memory_protection_is_cet_supported()) strcat(support_str, "CET");
+        vga_puts_at(support_str, 21, 40, VGA_CYAN | (VGA_BLACK << 4));
+
+        char enabled_str[40] = "Enabled: ";
+        if (memory_protection_is_smep_enabled()) strcat(enabled_str, "SMEP ");
+        if (memory_protection_is_smap_enabled()) strcat(enabled_str, "SMAP ");
+        if (memory_protection_is_pku_enabled()) strcat(enabled_str, "PKU ");
+        if (memory_protection_is_cet_enabled()) strcat(enabled_str, "CET");
+        vga_puts_at(enabled_str, 22, 40, VGA_YELLOW | (VGA_BLACK << 4));
+
+        if (memory_protection_is_cet_enabled()) {
+            u8 shadow_stack = memory_protection_is_shadow_stack_enabled();
+            u8 ibt = memory_protection_is_indirect_branch_tracking_enabled();
+
+            char cet_str[40];
+            sprintf(cet_str, "CET: %s %s",
+                    shadow_stack ? "SS" : "",
+                    ibt ? "IBT" : "");
+            vga_puts_at(cet_str, 23, 40, VGA_GREEN | (VGA_BLACK << 4));
+        }
+
+        u32 violations = memory_protection_get_violation_count();
+        char viol_str[40];
+        sprintf(viol_str, "Violations: %u", violations);
+        vga_puts_at(viol_str, 24, 40, VGA_LGRAY | (VGA_BLACK << 4));
+    } else {
+        vga_puts_at("Memory protection not supported", 21, 40, VGA_RED | (VGA_BLACK << 4));
+    }
+
+    while (1) {
+        timer_delay(4000);
+    }
+}
+
+static void virt_ext_demo_task(void) {
+    vga_set_cursor(12, 40);
+    vga_puts("Virtualization Extensions:\n");
+
+    if (virt_ext_is_supported()) {
+        char support_str[40] = "Support: ";
+        if (virt_ext_is_vmx_supported()) strcat(support_str, "VMX ");
+        if (virt_ext_is_svm_supported()) strcat(support_str, "SVM");
+        vga_puts_at(support_str, 13, 40, VGA_CYAN | (VGA_BLACK << 4));
+
+        if (virt_ext_is_vmx_supported()) {
+            u8 vmx_enabled = virt_ext_is_vmx_enabled();
+            u8 vmx_state = virt_ext_get_vmx_operation_state();
+
+            char vmx_str[40];
+            sprintf(vmx_str, "VMX: %s State: %u",
+                    vmx_enabled ? "Enabled" : "Disabled", vmx_state);
+            vga_puts_at(vmx_str, 14, 40, VGA_YELLOW | (VGA_BLACK << 4));
+
+            char features_str[40] = "Features: ";
+            if (virt_ext_is_ept_supported()) strcat(features_str, "EPT ");
+            if (virt_ext_is_vpid_supported()) strcat(features_str, "VPID ");
+            if (virt_ext_is_unrestricted_guest_supported()) strcat(features_str, "UG");
+            vga_puts_at(features_str, 15, 40, VGA_GREEN | (VGA_BLACK << 4));
+
+            u32 exits = virt_ext_get_vm_exit_count();
+            u32 entries = virt_ext_get_vm_entry_count();
+
+            char stats_str[40];
+            sprintf(stats_str, "Exits: %u Entries: %u", exits, entries);
+            vga_puts_at(stats_str, 16, 40, VGA_LBLUE | (VGA_BLACK << 4));
+
+            char advanced_str[40] = "Advanced: ";
+            if (virt_ext_is_vmfunc_supported()) strcat(advanced_str, "VMFUNC ");
+            if (virt_ext_is_nested_virtualization_supported()) strcat(advanced_str, "NESTED");
+            vga_puts_at(advanced_str, 17, 40, VGA_WHITE | (VGA_BLACK << 4));
+        }
+    } else {
+        vga_puts_at("Virtualization not supported", 13, 40, VGA_RED | (VGA_BLACK << 4));
+    }
+
+    while (1) {
+        timer_delay(5000);
+    }
+}
+
 static void system_info_task(void) {
     while (1) {
         /* Update system stats */
@@ -1658,7 +1797,10 @@ void x86_pc_demo_init(void) {
     task_create(memory_mgmt_demo_task, 42, 256);
     task_create(simd_demo_task, 43, 256);
     task_create(interrupt_mgmt_demo_task, 44, 256);
-    task_create(system_info_task, 45, 256);
+    task_create(power_mgmt_demo_task, 45, 256);
+    task_create(memory_protection_demo_task, 46, 256);
+    task_create(virt_ext_demo_task, 47, 256);
+    task_create(system_info_task, 48, 256);
 }
 
 /* Simple string functions */

@@ -7,6 +7,9 @@
 - **PIC**: 8259A Programmable Interrupt Controller with IRQ management
 - **MMU**: 4KB page-based memory management with demand paging
 - **CPUID**: CPU identification and feature detection
+- **Power Mgmt**: Advanced C-states/P-states deep control
+- **Memory Protection**: SMEP/SMAP/CET/PKU security extensions
+- **Virtualization Ext**: VT-x/EPT/VPID virtualization enhancements
 - **SIMD**: SSE/AVX/AVX-512 instruction set optimization
 - **Interrupt Mgmt**: NMI/SMI/MCE advanced interrupt handling
 - **Atomic**: CPU synchronization primitives and operations
@@ -222,6 +225,27 @@ qemu-system-x86_64 -kernel build/kernel.bin
 - MCE (Machine Check Exception) processing
 - Thermal interrupt management
 - Interrupt nesting and statistics
+
+### Advanced Power Management
+- C-states (C0-C8) deep sleep control
+- Package C-state coordination
+- Energy monitoring and RAPL
+- Power limiting and TDP management
+- MWAIT-based idle optimization
+
+### Memory Protection Extensions
+- SMEP (Supervisor Mode Execution Prevention)
+- SMAP (Supervisor Mode Access Prevention)
+- PKU (Protection Keys for Userspace)
+- CET (Control-flow Enforcement Technology)
+- Shadow stack and indirect branch tracking
+
+### Virtualization Extensions
+- VT-x (Intel Virtualization Technology)
+- VMCS (Virtual Machine Control Structure)
+- EPT (Extended Page Tables)
+- VPID (Virtual Processor Identifiers)
+- VMFUNC and nested virtualization
 
 ### Atomic Operations
 - Compare-and-swap primitives

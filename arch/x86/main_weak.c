@@ -6,7 +6,7 @@
 
 const char *arch_name(void) { return "x86-32"; }
 const char *mcu_name(void)  { return "QEMU-i686"; }
-const char *boot_name(void) { return "SIMD+Interrupt+Atomic"; }
+const char *boot_name(void) { return "Power+Protection+Virt"; }
 
 void vga_init(void);
 void ps2_kbd_init(void);
@@ -53,6 +53,9 @@ void cpu_features_init(void);
 void simd_init(void);
 void interrupt_mgmt_init(void);
 void atomic_init(void);
+void power_mgmt_init(void);
+void memory_protection_init(void);
+void virt_ext_init(void);
 void x86_pc_demo_init(void);
 
 void clock_init(void) {
@@ -131,6 +134,15 @@ void clock_init(void) {
 
     /* Initialize interrupt management */
     interrupt_mgmt_init();
+
+    /* Initialize power management */
+    power_mgmt_init();
+
+    /* Initialize memory protection */
+    memory_protection_init();
+
+    /* Initialize virtualization extensions */
+    virt_ext_init();
 
     /* Initialize ACPI */
     acpi_init();
