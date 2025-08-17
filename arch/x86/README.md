@@ -7,6 +7,9 @@
 - **PIC**: 8259A Programmable Interrupt Controller with IRQ management
 - **MMU**: 4KB page-based memory management with demand paging
 - **CPUID**: CPU identification and feature detection
+- **Debug HW**: Hardware breakpoints/watchpoints and tracing
+- **PMU Ext**: Advanced performance monitoring unit extensions
+- **Trace HW**: Intel PT/BTS/LBR instruction tracing
 - **Power Mgmt**: Advanced C-states/P-states deep control
 - **Memory Protection**: SMEP/SMAP/CET/PKU security extensions
 - **Virtualization Ext**: VT-x/EPT/VPID virtualization enhancements
@@ -239,6 +242,27 @@ qemu-system-x86_64 -kernel build/kernel.bin
 - PKU (Protection Keys for Userspace)
 - CET (Control-flow Enforcement Technology)
 - Shadow stack and indirect branch tracking
+
+### Hardware Debugging
+- Hardware breakpoints and watchpoints
+- Debug register (DR0-DR7) management
+- Single-step execution control
+- Branch tracing and general detect
+- I/O breakpoint support
+
+### PMU Extensions
+- Advanced performance monitoring
+- General-purpose and fixed counters
+- PEBS (Precise Event-Based Sampling)
+- LBR (Last Branch Record) stack
+- Performance monitoring interrupts
+
+### Hardware Tracing
+- Intel PT (Processor Trace)
+- BTS (Branch Trace Store)
+- Address filtering and range control
+- Cycle-accurate tracing
+- Power event and timing packets
 
 ### Virtualization Extensions
 - VT-x (Intel Virtualization Technology)

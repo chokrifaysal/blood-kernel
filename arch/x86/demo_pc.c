@@ -50,6 +50,9 @@
 #include "drivers/power_mgmt.h"
 #include "drivers/memory_protection.h"
 #include "drivers/virt_ext.h"
+#include "drivers/debug_hw.h"
+#include "drivers/pmu_ext.h"
+#include "drivers/trace_hw.h"
 
 extern void timer_delay(u32 ms);
 
@@ -70,6 +73,9 @@ static void vga_demo_task(void) {
     vga_puts("- IDT: 256 entries\n");
     vga_puts("- PIC: 8259A IRQ controller\n");
     vga_puts("- MMU: 4KB paging enabled\n");
+    vga_puts("- Debug: HW breakpoints/trace\n");
+    vga_puts("- PMU: Performance monitoring\n");
+    vga_puts("- Trace: Intel PT/BTS/LBR\n");
     vga_puts("- Power: C-states/P-states mgmt\n");
     vga_puts("- Protection: SMEP/SMAP/CET\n");
     vga_puts("- Virtualization: VT-x/EPT\n");
@@ -1734,6 +1740,136 @@ static void virt_ext_demo_task(void) {
     }
 }
 
+static void debug_hw_demo_task(void) {
+    vga_puts_at("Hardware Debugging:", 20, 0, VGA_WHITE | (VGA_BLACK << 4));
+
+    if (debug_hw_is_supported()) {
+        u8 num_bp = debug_hw_get_num_breakpoints();
+
+        char bp_str[40];
+        sprintf(bp_str, "Breakpoints: %u available", num_bp);
+        vga_puts_at(bp_str, 21, 0, VGA_CYAN | (VGA_BLACK << 4));
+
+        u8 single_step = debug_hw_is_single_step_enabled();
+        u8 branch_trace = debug_hw_is_branch_trace_enabled();
+
+        char features_str[40];
+        sprintf(features_str, "Features: %s %s",
+                single_step ? "SingleStep" : "",
+                branch_trace ? "BranchTrace" : "");
+        vga_puts_at(features_str, 22, 0, VGA_YELLOW | (VGA_BLACK << 4));
+
+        u32 debug_exceptions = debug_hw_get_debug_exception_count();
+        u32 single_steps = debug_hw_get_single_step_count();
+
+        char stats_str[40];
+        sprintf(stats_str, "Exceptions: %u Steps: %u", debug_exceptions, single_steps);
+        vga_puts_at(stats_str, 23, 0, VGA_GREEN | (VGA_BLACK << 4));
+
+        u64 dr6 = debug_hw_get_dr6_status();
+        u64 dr7 = debug_hw_get_dr7_control();
+
+        char regs_str[40];
+        sprintf(regs_str, "DR6: %08X DR7: %08X", (u32)dr6, (u32)dr7);
+        vga_puts_at(regs_str, 24, 0, VGA_LBLUE | (VGA_BLACK << 4));
+    } else {
+        vga_puts_at("Hardware debugging not supported", 21, 0, VGA_RED | (VGA_BLACK << 4));
+    }
+
+    while (1) {
+        timer_delay(3000);
+    }
+}
+
+static void pmu_ext_demo_task(void) {
+    vga_puts_at("PMU Extensions:", 20, 40, VGA_WHITE | (VGA_BLACK << 4));
+
+    if (pmu_ext_is_supported()) {
+        u8 version = pmu_ext_get_version();
+        u8 gp_counters = pmu_ext_get_num_gp_counters();
+        u8 fixed_counters = pmu_ext_get_num_fixed_counters();
+
+        char version_str[40];
+        sprintf(version_str, "Version: %u GP: %u Fixed: %u", version, gp_counters, fixed_counters);
+        vga_puts_at(version_str, 21, 40, VGA_CYAN | (VGA_BLACK << 4));
+
+        char support_str[40] = "Support: ";
+        if (pmu_ext_is_pebs_supported()) strcat(support_str, "PEBS ");
+        if (pmu_ext_is_lbr_supported()) strcat(support_str, "LBR");
+        vga_puts_at(support_str, 22, 40, VGA_YELLOW | (VGA_BLACK << 4));
+
+        u32 pmi_count = pmu_ext_get_pmi_count();
+        u32 overflow_count = pmu_ext_get_overflow_count();
+
+        char stats_str[40];
+        sprintf(stats_str, "PMI: %u Overflows: %u", pmi_count, overflow_count);
+        vga_puts_at(stats_str, 23, 40, VGA_GREEN | (VGA_BLACK << 4));
+
+        u64 global_status = pmu_ext_get_global_status();
+        char status_str[40];
+        sprintf(status_str, "Global Status: %08X", (u32)global_status);
+        vga_puts_at(status_str, 24, 40, VGA_LGRAY | (VGA_BLACK << 4));
+    } else {
+        vga_puts_at("PMU extensions not supported", 21, 40, VGA_RED | (VGA_BLACK << 4));
+    }
+
+    while (1) {
+        timer_delay(4000);
+    }
+}
+
+static void trace_hw_demo_task(void) {
+    vga_set_cursor(12, 0);
+    vga_puts("Hardware Tracing:\n");
+
+    if (trace_hw_is_supported()) {
+        char support_str[40] = "Support: ";
+        if (trace_hw_is_intel_pt_supported()) strcat(support_str, "Intel-PT ");
+        if (trace_hw_is_bts_supported()) strcat(support_str, "BTS");
+        vga_puts_at(support_str, 13, 0, VGA_CYAN | (VGA_BLACK << 4));
+
+        if (trace_hw_is_intel_pt_supported()) {
+            u8 pt_enabled = trace_hw_is_intel_pt_enabled();
+            u8 num_ranges = trace_hw_get_num_address_ranges();
+
+            char pt_str[40];
+            sprintf(pt_str, "Intel PT: %s Ranges: %u",
+                    pt_enabled ? "Enabled" : "Disabled", num_ranges);
+            vga_puts_at(pt_str, 14, 0, VGA_YELLOW | (VGA_BLACK << 4));
+
+            char features_str[40] = "Features: ";
+            if (trace_hw_is_cycle_accurate_supported()) strcat(features_str, "CYC ");
+            if (trace_hw_is_timing_packets_supported()) strcat(features_str, "TSC ");
+            if (trace_hw_is_power_event_trace_supported()) strcat(features_str, "PWR");
+            vga_puts_at(features_str, 15, 0, VGA_GREEN | (VGA_BLACK << 4));
+        }
+
+        if (trace_hw_is_bts_supported()) {
+            u8 bts_enabled = trace_hw_is_bts_enabled();
+            u32 bts_records = trace_hw_get_num_bts_records();
+
+            char bts_str[40];
+            sprintf(bts_str, "BTS: %s Records: %u",
+                    bts_enabled ? "Enabled" : "Disabled", bts_records);
+            vga_puts_at(bts_str, 16, 0, VGA_LBLUE | (VGA_BLACK << 4));
+        }
+
+        u32 packets = trace_hw_get_packets_generated();
+        u32 overflows = trace_hw_get_buffer_overflows();
+        u32 errors = trace_hw_get_trace_errors();
+
+        char stats_str[40];
+        sprintf(stats_str, "Packets: %u Overflows: %u Errors: %u", packets, overflows, errors);
+        vga_puts_at(stats_str, 17, 0, VGA_WHITE | (VGA_BLACK << 4));
+    } else {
+        vga_puts_at("Hardware tracing not supported", 13, 0, VGA_RED | (VGA_BLACK << 4));
+    }
+
+    while (1) {
+        timer_delay(5000);
+    }
+}
+
 static void system_info_task(void) {
     while (1) {
         /* Update system stats */
@@ -1800,7 +1936,10 @@ void x86_pc_demo_init(void) {
     task_create(power_mgmt_demo_task, 45, 256);
     task_create(memory_protection_demo_task, 46, 256);
     task_create(virt_ext_demo_task, 47, 256);
-    task_create(system_info_task, 48, 256);
+    task_create(debug_hw_demo_task, 48, 256);
+    task_create(pmu_ext_demo_task, 49, 256);
+    task_create(trace_hw_demo_task, 50, 256);
+    task_create(system_info_task, 51, 256);
 }
 
 /* Simple string functions */
