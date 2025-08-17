@@ -6,7 +6,7 @@
 
 const char *arch_name(void) { return "x86-32"; }
 const char *mcu_name(void)  { return "QEMU-i686"; }
-const char *boot_name(void) { return "Debug+PMU+Trace"; }
+const char *boot_name(void) { return "Exception+Memory+Security"; }
 
 void vga_init(void);
 void ps2_kbd_init(void);
@@ -59,6 +59,9 @@ void virt_ext_init(void);
 void debug_hw_init(void);
 void pmu_ext_init(void);
 void trace_hw_init(void);
+void exception_mgmt_init(void);
+void memory_adv_init(void);
+void security_ext_init(void);
 void x86_pc_demo_init(void);
 
 void clock_init(void) {
@@ -155,6 +158,15 @@ void clock_init(void) {
 
     /* Initialize hardware tracing */
     trace_hw_init();
+
+    /* Initialize exception management */
+    exception_mgmt_init();
+
+    /* Initialize advanced memory management */
+    memory_adv_init();
+
+    /* Initialize security extensions */
+    security_ext_init();
 
     /* Initialize ACPI */
     acpi_init();

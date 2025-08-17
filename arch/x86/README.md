@@ -7,6 +7,9 @@
 - **PIC**: 8259A Programmable Interrupt Controller with IRQ management
 - **MMU**: 4KB page-based memory management with demand paging
 - **CPUID**: CPU identification and feature detection
+- **Exception Mgmt**: CPU fault injection and recovery management
+- **Memory Adv**: PCID/INVPCID advanced memory management
+- **Security Ext**: MPX/CET security extensions and enforcement
 - **Debug HW**: Hardware breakpoints/watchpoints and tracing
 - **PMU Ext**: Advanced performance monitoring unit extensions
 - **Trace HW**: Intel PT/BTS/LBR instruction tracing
@@ -256,6 +259,27 @@ qemu-system-x86_64 -kernel build/kernel.bin
 - PEBS (Precise Event-Based Sampling)
 - LBR (Last Branch Record) stack
 - Performance monitoring interrupts
+
+### Exception Management
+- CPU fault injection and recovery
+- Exception logging and statistics
+- Recoverable exception handling
+- Double fault and machine check tracking
+- Configurable exception modes
+
+### Advanced Memory Management
+- PCID (Process Context Identifiers)
+- INVPCID instruction support
+- PAT (Page Attribute Table) control
+- MTRR (Memory Type Range Registers)
+- TLB management and optimization
+
+### Security Extensions
+- MPX (Memory Protection Extensions)
+- CET (Control-flow Enforcement Technology)
+- Shadow stack and indirect branch tracking
+- Bounds checking and violation handling
+- NX bit and security enforcement
 
 ### Hardware Tracing
 - Intel PT (Processor Trace)

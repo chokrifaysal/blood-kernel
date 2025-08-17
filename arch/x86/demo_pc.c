@@ -53,6 +53,9 @@
 #include "drivers/debug_hw.h"
 #include "drivers/pmu_ext.h"
 #include "drivers/trace_hw.h"
+#include "drivers/exception_mgmt.h"
+#include "drivers/memory_adv.h"
+#include "drivers/security_ext.h"
 
 extern void timer_delay(u32 ms);
 
@@ -73,6 +76,9 @@ static void vga_demo_task(void) {
     vga_puts("- IDT: 256 entries\n");
     vga_puts("- PIC: 8259A IRQ controller\n");
     vga_puts("- MMU: 4KB paging enabled\n");
+    vga_puts("- Exception: Fault mgmt/recovery\n");
+    vga_puts("- Memory Adv: PCID/INVPCID\n");
+    vga_puts("- Security: MPX/CET extensions\n");
     vga_puts("- Debug: HW breakpoints/trace\n");
     vga_puts("- PMU: Performance monitoring\n");
     vga_puts("- Trace: Intel PT/BTS/LBR\n");
@@ -1870,6 +1876,131 @@ static void trace_hw_demo_task(void) {
     }
 }
 
+static void exception_mgmt_demo_task(void) {
+    vga_puts_at("Exception Management:", 20, 0, VGA_WHITE | (VGA_BLACK << 4));
+
+    if (exception_mgmt_is_supported()) {
+        u32 total = exception_mgmt_get_total_exceptions();
+        u32 recovered = exception_mgmt_get_recovered_exceptions();
+        u32 unhandled = exception_mgmt_get_unhandled_exceptions();
+
+        char stats_str[40];
+        sprintf(stats_str, "Total: %u Recovered: %u", total, recovered);
+        vga_puts_at(stats_str, 21, 0, VGA_CYAN | (VGA_BLACK << 4));
+
+        char unhandled_str[40];
+        sprintf(unhandled_str, "Unhandled: %u", unhandled);
+        vga_puts_at(unhandled_str, 22, 0, VGA_YELLOW | (VGA_BLACK << 4));
+
+        char features_str[40] = "Features: ";
+        if (exception_mgmt_is_recovery_enabled()) strcat(features_str, "Recovery ");
+        if (exception_mgmt_is_logging_enabled()) strcat(features_str, "Logging ");
+        if (exception_mgmt_is_fault_injection_enabled()) strcat(features_str, "Injection");
+        vga_puts_at(features_str, 23, 0, VGA_GREEN | (VGA_BLACK << 4));
+
+        u64 last_df = exception_mgmt_get_last_double_fault_time();
+        u32 nested = exception_mgmt_get_nested_exception_count();
+
+        char special_str[40];
+        sprintf(special_str, "DoubleFault: %u Nested: %u", (u32)last_df, nested);
+        vga_puts_at(special_str, 24, 0, VGA_LBLUE | (VGA_BLACK << 4));
+    } else {
+        vga_puts_at("Exception management not supported", 21, 0, VGA_RED | (VGA_BLACK << 4));
+    }
+
+    while (1) {
+        timer_delay(3000);
+    }
+}
+
+static void memory_adv_demo_task(void) {
+    vga_puts_at("Advanced Memory:", 20, 40, VGA_WHITE | (VGA_BLACK << 4));
+
+    if (memory_adv_is_supported()) {
+        char support_str[40] = "Support: ";
+        if (memory_adv_is_pcid_supported()) strcat(support_str, "PCID ");
+        if (memory_adv_is_invpcid_supported()) strcat(support_str, "INVPCID ");
+        if (memory_adv_is_pat_supported()) strcat(support_str, "PAT ");
+        if (memory_adv_is_mtrr_supported()) strcat(support_str, "MTRR");
+        vga_puts_at(support_str, 21, 40, VGA_CYAN | (VGA_BLACK << 4));
+
+        if (memory_adv_is_pcid_enabled()) {
+            u16 current_pcid = memory_adv_get_current_pcid();
+
+            char pcid_str[40];
+            sprintf(pcid_str, "Current PCID: %u", current_pcid);
+            vga_puts_at(pcid_str, 22, 40, VGA_YELLOW | (VGA_BLACK << 4));
+        }
+
+        u32 tlb_flushes = memory_adv_get_total_tlb_flushes();
+        u32 pcid_switches = memory_adv_get_pcid_switches();
+        u32 invpcid_calls = memory_adv_get_invpcid_calls();
+
+        char stats_str[40];
+        sprintf(stats_str, "TLB: %u PCID: %u INV: %u", tlb_flushes, pcid_switches, invpcid_calls);
+        vga_puts_at(stats_str, 23, 40, VGA_GREEN | (VGA_BLACK << 4));
+
+        u8 mtrr_entries = memory_adv_get_num_mtrr_entries();
+        u64 pat_value = memory_adv_get_pat_value();
+
+        char config_str[40];
+        sprintf(config_str, "MTRR: %u PAT: %08X", mtrr_entries, (u32)pat_value);
+        vga_puts_at(config_str, 24, 40, VGA_LGRAY | (VGA_BLACK << 4));
+    } else {
+        vga_puts_at("Advanced memory not supported", 21, 40, VGA_RED | (VGA_BLACK << 4));
+    }
+
+    while (1) {
+        timer_delay(4000);
+    }
+}
+
+static void security_ext_demo_task(void) {
+    vga_set_cursor(12, 40);
+    vga_puts("Security Extensions:\n");
+
+    if (security_ext_is_supported()) {
+        char support_str[40] = "Support: ";
+        if (security_ext_is_mpx_supported()) strcat(support_str, "MPX ");
+        if (security_ext_is_cet_supported()) strcat(support_str, "CET");
+        vga_puts_at(support_str, 13, 40, VGA_CYAN | (VGA_BLACK << 4));
+
+        char enabled_str[40] = "Enabled: ";
+        if (security_ext_is_mpx_enabled()) strcat(enabled_str, "MPX ");
+        if (security_ext_is_cet_enabled()) strcat(enabled_str, "CET ");
+        if (security_ext_is_nx_enabled()) strcat(enabled_str, "NX");
+        vga_puts_at(enabled_str, 14, 40, VGA_YELLOW | (VGA_BLACK << 4));
+
+        if (security_ext_is_cet_enabled()) {
+            char cet_str[40] = "CET: ";
+            if (security_ext_is_shadow_stack_enabled()) strcat(cet_str, "SS ");
+            if (security_ext_is_ibt_enabled()) strcat(cet_str, "IBT");
+            vga_puts_at(cet_str, 15, 40, VGA_GREEN | (VGA_BLACK << 4));
+        }
+
+        u32 total_violations = security_ext_get_violation_count();
+        u32 mpx_violations = security_ext_get_mpx_violations();
+        u32 cet_violations = security_ext_get_cet_violations();
+
+        char viol_str[40];
+        sprintf(viol_str, "Violations: %u MPX: %u CET: %u", total_violations, mpx_violations, cet_violations);
+        vga_puts_at(viol_str, 16, 40, VGA_LBLUE | (VGA_BLACK << 4));
+
+        if (security_ext_is_shadow_stack_enabled()) {
+            u64 ssp = security_ext_get_shadow_stack_pointer();
+            char ssp_str[40];
+            sprintf(ssp_str, "SSP: %08X", (u32)ssp);
+            vga_puts_at(ssp_str, 17, 40, VGA_WHITE | (VGA_BLACK << 4));
+        }
+    } else {
+        vga_puts_at("Security extensions not supported", 13, 40, VGA_RED | (VGA_BLACK << 4));
+    }
+
+    while (1) {
+        timer_delay(5000);
+    }
+}
+
 static void system_info_task(void) {
     while (1) {
         /* Update system stats */
@@ -1939,7 +2070,10 @@ void x86_pc_demo_init(void) {
     task_create(debug_hw_demo_task, 48, 256);
     task_create(pmu_ext_demo_task, 49, 256);
     task_create(trace_hw_demo_task, 50, 256);
-    task_create(system_info_task, 51, 256);
+    task_create(exception_mgmt_demo_task, 51, 256);
+    task_create(memory_adv_demo_task, 52, 256);
+    task_create(security_ext_demo_task, 53, 256);
+    task_create(system_info_task, 54, 256);
 }
 
 /* Simple string functions */
