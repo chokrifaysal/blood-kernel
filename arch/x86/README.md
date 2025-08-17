@@ -7,6 +7,9 @@
 - **PIC**: 8259A Programmable Interrupt Controller with IRQ management
 - **MMU**: 4KB page-based memory management with demand paging
 - **CPUID**: CPU identification and feature detection
+- **Cache Mgmt**: L1/L2/L3 cache control and optimization
+- **Memory Mgmt**: PAT/MTRR advanced memory management
+- **CPU Features**: Model-specific feature control and configuration
 - **CPUFreq**: SpeedStep/Cool'n'Quiet frequency scaling
 - **IOAPIC**: I/O Advanced Programmable Interrupt Controller
 - **CPUID Ext**: Extended feature detection and management
@@ -188,6 +191,27 @@ qemu-system-x86_64 -kernel build/kernel.bin
 - GSI (Global System Interrupt) routing
 - Redirection table configuration
 - Legacy PIC replacement
+
+### Cache Management
+- L1/L2/L3 cache hierarchy control
+- Cache line flushing and writeback
+- CLFLUSH/CLFLUSHOPT/CLWB instructions
+- Cache prefetching and optimization
+- Cache allocation technology support
+
+### Advanced Memory Management
+- PAT (Page Attribute Table) configuration
+- MTRR (Memory Type Range Register) control
+- Variable and fixed MTRR support
+- Memory type optimization (WB/WT/WC/UC)
+- TLB management and invalidation
+
+### CPU Feature Control
+- Intel/AMD model-specific features
+- VMX/SMX virtualization control
+- SpeedStep/Turbo boost management
+- Execute Disable (XD) bit control
+- Energy performance bias tuning
 
 ### Extended CPUID Features
 - Comprehensive feature detection

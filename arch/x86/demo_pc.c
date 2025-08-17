@@ -41,6 +41,9 @@
 #include "drivers/cpufreq.h"
 #include "drivers/ioapic.h"
 #include "drivers/cpuid_ext.h"
+#include "drivers/cache_mgmt.h"
+#include "drivers/memory_mgmt.h"
+#include "drivers/cpu_features.h"
 
 extern void timer_delay(u32 ms);
 
@@ -61,6 +64,9 @@ static void vga_demo_task(void) {
     vga_puts("- IDT: 256 entries\n");
     vga_puts("- PIC: 8259A IRQ controller\n");
     vga_puts("- MMU: 4KB paging enabled\n");
+    vga_puts("- Cache: L1/L2/L3 management\n");
+    vga_puts("- Memory: PAT/MTRR extensions\n");
+    vga_puts("- Features: CPU control/config\n");
     vga_puts("- CPUFreq: SpeedStep/Cool'n'Quiet\n");
     vga_puts("- IOAPIC: Advanced interrupt ctrl\n");
     vga_puts("- CPUID: Extended feature detect\n");
@@ -1332,6 +1338,135 @@ static void cpuid_ext_demo_task(void) {
     }
 }
 
+static void cache_mgmt_demo_task(void) {
+    vga_puts_at("Cache Management:", 20, 0, VGA_WHITE | (VGA_BLACK << 4));
+
+    if (cache_mgmt_is_supported()) {
+        u8 levels = cache_mgmt_get_num_levels();
+        u32 total_size = cache_mgmt_get_total_cache_size();
+
+        char levels_str[40];
+        sprintf(levels_str, "Levels: %u Total: %uKB", levels, total_size / 1024);
+        vga_puts_at(levels_str, 21, 0, VGA_CYAN | (VGA_BLACK << 4));
+
+        /* Show L1 cache info */
+        u32 l1d_size = cache_mgmt_get_cache_size(1, CACHE_TYPE_DATA);
+        u16 l1d_line = cache_mgmt_get_line_size(1, CACHE_TYPE_DATA);
+
+        if (l1d_size > 0) {
+            char l1_str[40];
+            sprintf(l1_str, "L1D: %uKB/%uB", l1d_size / 1024, l1d_line);
+            vga_puts_at(l1_str, 22, 0, VGA_YELLOW | (VGA_BLACK << 4));
+        }
+
+        /* Show L2 cache info */
+        u32 l2_size = cache_mgmt_get_cache_size(2, CACHE_TYPE_UNIFIED);
+        if (l2_size > 0) {
+            char l2_str[40];
+            sprintf(l2_str, "L2: %uKB", l2_size / 1024);
+            vga_puts_at(l2_str, 23, 0, VGA_GREEN | (VGA_BLACK << 4));
+        }
+
+        /* Show features */
+        char features[40] = "Features: ";
+        if (cache_mgmt_is_clflush_supported()) strcat(features, "CLFLUSH ");
+        if (cache_mgmt_is_clflushopt_supported()) strcat(features, "OPT ");
+        if (cache_mgmt_is_clwb_supported()) strcat(features, "CLWB");
+        vga_puts_at(features, 24, 0, VGA_LBLUE | (VGA_BLACK << 4));
+    } else {
+        vga_puts_at("Cache management not supported", 21, 0, VGA_RED | (VGA_BLACK << 4));
+    }
+
+    while (1) {
+        timer_delay(3000);
+    }
+}
+
+static void memory_mgmt_demo_task(void) {
+    vga_puts_at("Memory Management:", 20, 40, VGA_WHITE | (VGA_BLACK << 4));
+
+    if (memory_mgmt_is_supported()) {
+        char support_str[40] = "Support: ";
+        if (memory_mgmt_is_pat_supported()) strcat(support_str, "PAT ");
+        if (memory_mgmt_is_mtrr_supported()) strcat(support_str, "MTRR ");
+        if (memory_mgmt_is_wc_supported()) strcat(support_str, "WC");
+        vga_puts_at(support_str, 21, 40, VGA_CYAN | (VGA_BLACK << 4));
+
+        if (memory_mgmt_is_mtrr_supported()) {
+            u8 num_mtrrs = memory_mgmt_get_num_variable_mtrrs();
+            u8 default_type = memory_mgmt_get_default_memory_type();
+
+            char mtrr_str[40];
+            sprintf(mtrr_str, "MTRRs: %u Default: %u", num_mtrrs, default_type);
+            vga_puts_at(mtrr_str, 22, 40, VGA_YELLOW | (VGA_BLACK << 4));
+        }
+
+        if (memory_mgmt_is_pat_supported()) {
+            u64 pat_value = memory_mgmt_get_pat_value();
+            char pat_str[40];
+            sprintf(pat_str, "PAT: %08X%08X", (u32)(pat_value >> 32), (u32)pat_value);
+            vga_puts_at(pat_str, 23, 40, VGA_GREEN | (VGA_BLACK << 4));
+        }
+
+        char advanced[40] = "Advanced: ";
+        if (memory_mgmt_is_memory_encryption_supported()) strcat(advanced, "SME ");
+        if (memory_mgmt_is_protection_keys_supported()) strcat(advanced, "PKU ");
+        if (memory_mgmt_is_smrr_supported()) strcat(advanced, "SMRR");
+        vga_puts_at(advanced, 24, 40, VGA_LGRAY | (VGA_BLACK << 4));
+    } else {
+        vga_puts_at("Memory management not supported", 21, 40, VGA_RED | (VGA_BLACK << 4));
+    }
+
+    while (1) {
+        timer_delay(4000);
+    }
+}
+
+static void cpu_features_demo_task(void) {
+    vga_set_cursor(12, 0);
+    vga_puts("CPU Features Control:\n");
+
+    const char* vendor = cpu_features_is_intel() ? "Intel" :
+                        cpu_features_is_amd() ? "AMD" : "Unknown";
+
+    char vendor_str[40];
+    sprintf(vendor_str, "Vendor: %s", vendor);
+    vga_puts_at(vendor_str, 13, 0, VGA_CYAN | (VGA_BLACK << 4));
+
+    char vmx_str[40] = "VMX: ";
+    if (cpu_features_is_vmx_supported()) {
+        strcat(vmx_str, cpu_features_is_vmx_locked() ? "Locked" : "Available");
+    } else {
+        strcat(vmx_str, "Not supported");
+    }
+    vga_puts_at(vmx_str, 14, 0, VGA_YELLOW | (VGA_BLACK << 4));
+
+    char speedstep_str[40] = "SpeedStep: ";
+    strcat(speedstep_str, cpu_features_is_speedstep_enabled() ? "Enabled" : "Disabled");
+    vga_puts_at(speedstep_str, 15, 0, VGA_GREEN | (VGA_BLACK << 4));
+
+    char turbo_str[40] = "Turbo: ";
+    strcat(turbo_str, cpu_features_is_turbo_enabled() ? "Enabled" : "Disabled");
+    vga_puts_at(turbo_str, 16, 0, VGA_LBLUE | (VGA_BLACK << 4));
+
+    if (cpu_features_is_intel()) {
+        u32 max_ratio = cpu_features_get_max_non_turbo_ratio();
+        u32 turbo_ratio = cpu_features_get_max_turbo_ratio();
+
+        char ratio_str[40];
+        sprintf(ratio_str, "Ratios: %u/%u", max_ratio, turbo_ratio);
+        vga_puts_at(ratio_str, 17, 0, VGA_WHITE | (VGA_BLACK << 4));
+    }
+
+    char xd_str[40] = "XD: ";
+    strcat(xd_str, cpu_features_is_xd_enabled() ? "Enabled" : "Disabled");
+    vga_puts_at(xd_str, 18, 0, VGA_LGRAY | (VGA_BLACK << 4));
+
+    while (1) {
+        timer_delay(5000);
+    }
+}
+
 static void system_info_task(void) {
     while (1) {
         /* Update system stats */
@@ -1363,33 +1498,36 @@ void x86_pc_demo_init(void) {
     task_create(serial_demo_task, 10, 256);
     task_create(floppy_demo_task, 11, 512);
     task_create(smbios_demo_task, 12, 256);
-    task_create(cpuid_ext_demo_task, 13, 256);
-    task_create(errata_demo_task, 14, 256);
-    task_create(numa_demo_task, 15, 256);
-    task_create(perfmon_demo_task, 16, 256);
-    task_create(x2apic_demo_task, 17, 256);
-    task_create(iommu_demo_task, 18, 256);
-    task_create(acpi_demo_task, 19, 256);
-    task_create(apic_demo_task, 20, 256);
-    task_create(usb_demo_task, 21, 256);
-    task_create(audio_demo_task, 22, 256);
-    task_create(network_demo_task, 23, 256);
-    task_create(dma_demo_task, 24, 256);
-    task_create(hpet_demo_task, 25, 256);
-    task_create(msr_demo_task, 26, 256);
-    task_create(thermal_demo_task, 27, 256);
-    task_create(power_demo_task, 28, 256);
-    task_create(cache_demo_task, 29, 256);
-    task_create(vmx_demo_task, 30, 256);
-    task_create(longmode_demo_task, 31, 256);
-    task_create(microcode_demo_task, 32, 256);
-    task_create(topology_demo_task, 33, 256);
-    task_create(xsave_demo_task, 34, 256);
-    task_create(security_demo_task, 35, 256);
-    task_create(debug_demo_task, 36, 256);
-    task_create(cpufreq_demo_task, 37, 256);
-    task_create(ioapic_demo_task, 38, 256);
-    task_create(system_info_task, 39, 256);
+    task_create(cpu_features_demo_task, 13, 256);
+    task_create(cpuid_ext_demo_task, 14, 256);
+    task_create(errata_demo_task, 15, 256);
+    task_create(numa_demo_task, 16, 256);
+    task_create(perfmon_demo_task, 17, 256);
+    task_create(x2apic_demo_task, 18, 256);
+    task_create(iommu_demo_task, 19, 256);
+    task_create(acpi_demo_task, 20, 256);
+    task_create(apic_demo_task, 21, 256);
+    task_create(usb_demo_task, 22, 256);
+    task_create(audio_demo_task, 23, 256);
+    task_create(network_demo_task, 24, 256);
+    task_create(dma_demo_task, 25, 256);
+    task_create(hpet_demo_task, 26, 256);
+    task_create(msr_demo_task, 27, 256);
+    task_create(thermal_demo_task, 28, 256);
+    task_create(power_demo_task, 29, 256);
+    task_create(cache_demo_task, 30, 256);
+    task_create(vmx_demo_task, 31, 256);
+    task_create(longmode_demo_task, 32, 256);
+    task_create(microcode_demo_task, 33, 256);
+    task_create(topology_demo_task, 34, 256);
+    task_create(xsave_demo_task, 35, 256);
+    task_create(security_demo_task, 36, 256);
+    task_create(debug_demo_task, 37, 256);
+    task_create(cpufreq_demo_task, 38, 256);
+    task_create(ioapic_demo_task, 39, 256);
+    task_create(cache_mgmt_demo_task, 40, 256);
+    task_create(memory_mgmt_demo_task, 41, 256);
+    task_create(system_info_task, 42, 256);
 }
 
 /* Simple string functions */

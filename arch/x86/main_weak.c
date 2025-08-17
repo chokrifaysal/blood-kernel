@@ -6,7 +6,7 @@
 
 const char *arch_name(void) { return "x86-32"; }
 const char *mcu_name(void)  { return "QEMU-i686"; }
-const char *boot_name(void) { return "CPUFreq+IOAPIC+CPUID"; }
+const char *boot_name(void) { return "Cache+Memory+Features"; }
 
 void vga_init(void);
 void ps2_kbd_init(void);
@@ -47,6 +47,9 @@ void errata_init(void);
 void cpufreq_init(void);
 void ioapic_init(void);
 void cpuid_ext_init(void);
+void cache_mgmt_init(void);
+void memory_mgmt_init(void);
+void cpu_features_init(void);
 void x86_pc_demo_init(void);
 
 void clock_init(void) {
@@ -107,6 +110,15 @@ void clock_init(void) {
 
     /* Initialize CPU frequency scaling */
     cpufreq_init();
+
+    /* Initialize CPU features control */
+    cpu_features_init();
+
+    /* Initialize cache management */
+    cache_mgmt_init();
+
+    /* Initialize memory management */
+    memory_mgmt_init();
 
     /* Initialize ACPI */
     acpi_init();
