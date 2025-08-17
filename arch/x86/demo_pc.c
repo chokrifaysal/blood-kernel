@@ -56,6 +56,9 @@
 #include "drivers/exception_mgmt.h"
 #include "drivers/memory_adv.h"
 #include "drivers/security_ext.h"
+#include "drivers/freq_scaling.h"
+#include "drivers/system_ctrl.h"
+#include "drivers/cpu_ext.h"
 
 extern void timer_delay(u32 ms);
 
@@ -76,6 +79,9 @@ static void vga_demo_task(void) {
     vga_puts("- IDT: 256 entries\n");
     vga_puts("- PIC: 8259A IRQ controller\n");
     vga_puts("- MMU: 4KB paging enabled\n");
+    vga_puts("- Freq Scaling: P-states/Turbo\n");
+    vga_puts("- System Ctrl: SMM/ACPI/Reset\n");
+    vga_puts("- CPU Ext: AVX-512/AMX/XSAVE\n");
     vga_puts("- Exception: Fault mgmt/recovery\n");
     vga_puts("- Memory Adv: PCID/INVPCID\n");
     vga_puts("- Security: MPX/CET extensions\n");
@@ -2001,6 +2007,139 @@ static void security_ext_demo_task(void) {
     }
 }
 
+static void freq_scaling_demo_task(void) {
+    vga_puts_at("Frequency Scaling:", 20, 0, VGA_WHITE | (VGA_BLACK << 4));
+
+    if (freq_scaling_is_supported()) {
+        char support_str[40] = "Support: ";
+        if (freq_scaling_is_speedstep_supported()) strcat(support_str, "SpeedStep ");
+        if (freq_scaling_is_turbo_supported()) strcat(support_str, "Turbo");
+        vga_puts_at(support_str, 21, 0, VGA_CYAN | (VGA_BLACK << 4));
+
+        u16 current_freq = freq_scaling_get_current_frequency();
+        u16 max_freq = freq_scaling_get_max_frequency();
+        u16 base_freq = freq_scaling_get_base_frequency();
+
+        char freq_str[40];
+        sprintf(freq_str, "Freq: %uMHz Max: %uMHz Base: %uMHz", current_freq, max_freq, base_freq);
+        vga_puts_at(freq_str, 22, 0, VGA_YELLOW | (VGA_BLACK << 4));
+
+        u8 num_pstates = freq_scaling_get_num_pstates();
+        u8 current_pstate = freq_scaling_get_current_pstate();
+        u8 turbo_enabled = freq_scaling_is_turbo_enabled();
+
+        char state_str[40];
+        sprintf(state_str, "P-states: %u Current: %u Turbo: %s",
+                num_pstates, current_pstate, turbo_enabled ? "On" : "Off");
+        vga_puts_at(state_str, 23, 0, VGA_GREEN | (VGA_BLACK << 4));
+
+        u32 transitions = freq_scaling_get_transition_count();
+        u8 epb = freq_scaling_get_energy_perf_bias();
+
+        char stats_str[40];
+        sprintf(stats_str, "Transitions: %u EPB: %u", transitions, epb);
+        vga_puts_at(stats_str, 24, 0, VGA_LBLUE | (VGA_BLACK << 4));
+    } else {
+        vga_puts_at("Frequency scaling not supported", 21, 0, VGA_RED | (VGA_BLACK << 4));
+    }
+
+    while (1) {
+        timer_delay(3000);
+    }
+}
+
+static void system_ctrl_demo_task(void) {
+    vga_puts_at("System Control:", 20, 40, VGA_WHITE | (VGA_BLACK << 4));
+
+    if (system_ctrl_is_supported()) {
+        char support_str[40] = "Support: ";
+        if (system_ctrl_is_smm_supported()) strcat(support_str, "SMM ");
+        if (system_ctrl_is_acpi_supported()) strcat(support_str, "ACPI");
+        vga_puts_at(support_str, 21, 40, VGA_CYAN | (VGA_BLACK << 4));
+
+        if (system_ctrl_is_smm_supported()) {
+            u32 smi_count = system_ctrl_get_smi_count();
+            u8 smm_enabled = system_ctrl_is_smm_enabled();
+
+            char smm_str[40];
+            sprintf(smm_str, "SMM: %s SMI Count: %u",
+                    smm_enabled ? "Enabled" : "Disabled", smi_count);
+            vga_puts_at(smm_str, 22, 40, VGA_YELLOW | (VGA_BLACK << 4));
+        }
+
+        if (system_ctrl_is_acpi_supported()) {
+            u8 acpi_state = system_ctrl_get_acpi_state();
+            char acpi_str[40] = "ACPI: S";
+            char state_char = '0' + acpi_state;
+            strncat(acpi_str, &state_char, 1);
+            strcat(acpi_str, " ");
+            if (system_ctrl_is_s3_supported()) strcat(acpi_str, "S3 ");
+            if (system_ctrl_is_s4_supported()) strcat(acpi_str, "S4 ");
+            if (system_ctrl_is_s5_supported()) strcat(acpi_str, "S5");
+            vga_puts_at(acpi_str, 23, 40, VGA_GREEN | (VGA_BLACK << 4));
+        }
+
+        u64 uptime = system_ctrl_get_uptime();
+        u32 resets = system_ctrl_get_reset_count();
+
+        char stats_str[40];
+        sprintf(stats_str, "Uptime: %us Resets: %u", (u32)uptime, resets);
+        vga_puts_at(stats_str, 24, 40, VGA_LGRAY | (VGA_BLACK << 4));
+    } else {
+        vga_puts_at("System control not supported", 21, 40, VGA_RED | (VGA_BLACK << 4));
+    }
+
+    while (1) {
+        timer_delay(4000);
+    }
+}
+
+static void cpu_ext_demo_task(void) {
+    vga_set_cursor(12, 0);
+    vga_puts("CPU Extensions:\n");
+
+    if (cpu_ext_is_supported()) {
+        char support_str[40] = "Support: ";
+        if (cpu_ext_is_avx512_supported()) strcat(support_str, "AVX-512 ");
+        if (cpu_ext_is_amx_supported()) strcat(support_str, "AMX");
+        vga_puts_at(support_str, 13, 0, VGA_CYAN | (VGA_BLACK << 4));
+
+        char enabled_str[40] = "Enabled: ";
+        if (cpu_ext_is_avx512_enabled()) strcat(enabled_str, "AVX-512 ");
+        if (cpu_ext_is_amx_enabled()) strcat(enabled_str, "AMX");
+        vga_puts_at(enabled_str, 14, 0, VGA_YELLOW | (VGA_BLACK << 4));
+
+        if (cpu_ext_is_avx512_supported()) {
+            u32 avx512_features = cpu_ext_get_avx512_features();
+            char avx512_str[40];
+            sprintf(avx512_str, "AVX-512 Features: %08X", avx512_features);
+            vga_puts_at(avx512_str, 15, 0, VGA_GREEN | (VGA_BLACK << 4));
+        }
+
+        if (cpu_ext_is_amx_supported()) {
+            u8 num_tiles = cpu_ext_get_num_tiles();
+            u16 tile_rows = cpu_ext_get_tile_max_rows();
+
+            char amx_str[40];
+            sprintf(amx_str, "AMX: %u tiles, %u max rows", num_tiles, tile_rows);
+            vga_puts_at(amx_str, 16, 0, VGA_LBLUE | (VGA_BLACK << 4));
+        }
+
+        u32 xsave_size = cpu_ext_get_xsave_area_size();
+        u64 xcr0 = cpu_ext_get_xcr0_value();
+
+        char xsave_str[40];
+        sprintf(xsave_str, "XSAVE: %u bytes XCR0: %08X", xsave_size, (u32)xcr0);
+        vga_puts_at(xsave_str, 17, 0, VGA_WHITE | (VGA_BLACK << 4));
+    } else {
+        vga_puts_at("CPU extensions not supported", 13, 0, VGA_RED | (VGA_BLACK << 4));
+    }
+
+    while (1) {
+        timer_delay(5000);
+    }
+}
+
 static void system_info_task(void) {
     while (1) {
         /* Update system stats */
@@ -2073,7 +2212,10 @@ void x86_pc_demo_init(void) {
     task_create(exception_mgmt_demo_task, 51, 256);
     task_create(memory_adv_demo_task, 52, 256);
     task_create(security_ext_demo_task, 53, 256);
-    task_create(system_info_task, 54, 256);
+    task_create(freq_scaling_demo_task, 54, 256);
+    task_create(system_ctrl_demo_task, 55, 256);
+    task_create(cpu_ext_demo_task, 56, 256);
+    task_create(system_info_task, 57, 256);
 }
 
 /* Simple string functions */

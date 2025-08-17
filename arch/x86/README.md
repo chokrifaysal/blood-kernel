@@ -7,6 +7,9 @@
 - **PIC**: 8259A Programmable Interrupt Controller with IRQ management
 - **MMU**: 4KB page-based memory management with demand paging
 - **CPUID**: CPU identification and feature detection
+- **Freq Scaling**: P-states/Turbo frequency scaling and power management
+- **System Ctrl**: SMM/ACPI system control and power state management
+- **CPU Ext**: AVX-512/AMX instruction set extensions and XSAVE
 - **Exception Mgmt**: CPU fault injection and recovery management
 - **Memory Adv**: PCID/INVPCID advanced memory management
 - **Security Ext**: MPX/CET security extensions and enforcement
@@ -273,6 +276,27 @@ qemu-system-x86_64 -kernel build/kernel.bin
 - PAT (Page Attribute Table) control
 - MTRR (Memory Type Range Registers)
 - TLB management and optimization
+
+### Frequency Scaling
+- P-states and Turbo Boost control
+- Intel SpeedStep and AMD Cool'n'Quiet
+- Energy performance bias configuration
+- Dynamic frequency adjustment
+- Power consumption optimization
+
+### System Control
+- SMM (System Management Mode) support
+- ACPI power state management (S0-S5)
+- System reset and shutdown control
+- Wake event management
+- Uptime and reset cause tracking
+
+### CPU Extensions
+- AVX-512 instruction set support
+- AMX (Advanced Matrix Extensions)
+- XSAVE/XRSTOR state management
+- Tile configuration for AMX
+- Feature usage tracking and statistics
 
 ### Security Extensions
 - MPX (Memory Protection Extensions)

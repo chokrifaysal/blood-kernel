@@ -6,7 +6,7 @@
 
 const char *arch_name(void) { return "x86-32"; }
 const char *mcu_name(void)  { return "QEMU-i686"; }
-const char *boot_name(void) { return "Exception+Memory+Security"; }
+const char *boot_name(void) { return "Freq+System+CPUExt"; }
 
 void vga_init(void);
 void ps2_kbd_init(void);
@@ -62,6 +62,9 @@ void trace_hw_init(void);
 void exception_mgmt_init(void);
 void memory_adv_init(void);
 void security_ext_init(void);
+void freq_scaling_init(void);
+void system_ctrl_init(void);
+void cpu_ext_init(void);
 void x86_pc_demo_init(void);
 
 void clock_init(void) {
@@ -167,6 +170,15 @@ void clock_init(void) {
 
     /* Initialize security extensions */
     security_ext_init();
+
+    /* Initialize frequency scaling */
+    freq_scaling_init();
+
+    /* Initialize system control */
+    system_ctrl_init();
+
+    /* Initialize CPU extensions */
+    cpu_ext_init();
 
     /* Initialize ACPI */
     acpi_init();
