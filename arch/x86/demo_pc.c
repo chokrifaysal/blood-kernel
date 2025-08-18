@@ -59,6 +59,9 @@
 #include "drivers/freq_scaling.h"
 #include "drivers/system_ctrl.h"
 #include "drivers/cpu_ext.h"
+#include "drivers/microarch.h"
+#include "drivers/apic_ext.h"
+#include "drivers/timing_sync.h"
 
 extern void timer_delay(u32 ms);
 
@@ -79,6 +82,12 @@ static void vga_demo_task(void) {
     vga_puts("- IDT: 256 entries\n");
     vga_puts("- PIC: 8259A IRQ controller\n");
     vga_puts("- MMU: 4KB paging enabled\n");
+    vga_puts("- Microarch: Branch pred/spec\n");
+    vga_puts("- APIC Ext: x2APIC/IPI/Timer\n");
+    vga_puts("- Timing: TSC/HPET/Sync\n");
+    vga_puts("- Microarch: Branch pred/spec\n");
+    vga_puts("- APIC Ext: x2APIC/IPI/Timer\n");
+    vga_puts("- Timing: TSC/HPET/Sync\n");
     vga_puts("- Freq Scaling: P-states/Turbo\n");
     vga_puts("- System Ctrl: SMM/ACPI/Reset\n");
     vga_puts("- CPU Ext: AVX-512/AMX/XSAVE\n");
@@ -2140,6 +2149,139 @@ static void cpu_ext_demo_task(void) {
     }
 }
 
+static void microarch_demo_task(void) {
+    vga_puts_at("Microarchitecture:", 20, 0, VGA_WHITE | (VGA_BLACK << 4));
+
+    if (microarch_is_supported()) {
+        char support_str[40] = "Support: ";
+        if (microarch_is_spec_ctrl_supported()) strcat(support_str, "SpecCtrl ");
+        if (microarch_is_ibrs_supported()) strcat(support_str, "IBRS ");
+        if (microarch_is_stibp_supported()) strcat(support_str, "STIBP ");
+        if (microarch_is_ssbd_supported()) strcat(support_str, "SSBD");
+        vga_puts_at(support_str, 21, 0, VGA_CYAN | (VGA_BLACK << 4));
+
+        char enabled_str[40] = "Enabled: ";
+        if (microarch_is_ibrs_enabled()) strcat(enabled_str, "IBRS ");
+        if (microarch_is_stibp_enabled()) strcat(enabled_str, "STIBP ");
+        if (microarch_is_ssbd_enabled()) strcat(enabled_str, "SSBD");
+        vga_puts_at(enabled_str, 22, 0, VGA_YELLOW | (VGA_BLACK << 4));
+
+        u32 mitigations = microarch_get_speculation_mitigations();
+        u32 branch_flushes = microarch_get_branch_flushes();
+
+        char stats_str[40];
+        sprintf(stats_str, "Mitigations: %u Flushes: %u", mitigations, branch_flushes);
+        vga_puts_at(stats_str, 23, 0, VGA_GREEN | (VGA_BLACK << 4));
+
+        const branch_stats_t* branch_stats = microarch_get_branch_stats();
+        char branch_str[40];
+        sprintf(branch_str, "Branches: %u Misses: %u Rate: %u%%",
+                (u32)branch_stats->total_branches, (u32)branch_stats->branch_misses,
+                branch_stats->misprediction_rate);
+        vga_puts_at(branch_str, 24, 0, VGA_LBLUE | (VGA_BLACK << 4));
+    } else {
+        vga_puts_at("Microarchitecture not supported", 21, 0, VGA_RED | (VGA_BLACK << 4));
+    }
+
+    while (1) {
+        timer_delay(3000);
+    }
+}
+
+static void apic_ext_demo_task(void) {
+    vga_puts_at("APIC Extensions:", 20, 40, VGA_WHITE | (VGA_BLACK << 4));
+
+    if (apic_ext_is_supported()) {
+        u32 apic_id = apic_ext_get_id();
+        u32 version = apic_ext_get_version();
+        u8 max_lvt = apic_ext_get_max_lvt_entries();
+
+        char info_str[40];
+        sprintf(info_str, "ID: %u Ver: %u LVT: %u", apic_id, version, max_lvt);
+        vga_puts_at(info_str, 21, 40, VGA_CYAN | (VGA_BLACK << 4));
+
+        char support_str[40] = "Support: ";
+        if (apic_ext_is_x2apic_supported()) strcat(support_str, "x2APIC ");
+        if (apic_ext_is_x2apic_enabled()) strcat(support_str, "(Enabled)");
+        vga_puts_at(support_str, 22, 40, VGA_YELLOW | (VGA_BLACK << 4));
+
+        u32 ipi_count = apic_ext_get_ipi_count();
+        u32 nmi_count = apic_ext_get_nmi_count();
+        u32 broadcast_count = apic_ext_get_broadcast_count();
+
+        char ipi_str[40];
+        sprintf(ipi_str, "IPI: %u NMI: %u Broadcast: %u", ipi_count, nmi_count, broadcast_count);
+        vga_puts_at(ipi_str, 23, 40, VGA_GREEN | (VGA_BLACK << 4));
+
+        u32 error_count = apic_ext_get_error_count();
+        u32 last_error = apic_ext_get_last_error();
+
+        char error_str[40];
+        sprintf(error_str, "Errors: %u Last: %08X", error_count, last_error);
+        vga_puts_at(error_str, 24, 40, VGA_LGRAY | (VGA_BLACK << 4));
+    } else {
+        vga_puts_at("APIC extensions not supported", 21, 40, VGA_RED | (VGA_BLACK << 4));
+    }
+
+    while (1) {
+        timer_delay(4000);
+    }
+}
+
+static void timing_sync_demo_task(void) {
+    vga_set_cursor(12, 40);
+    vga_puts("Timing & Sync:\n");
+
+    if (timing_sync_is_supported()) {
+        char support_str[40] = "Support: ";
+        if (timing_sync_is_tsc_supported()) strcat(support_str, "TSC ");
+        if (timing_sync_is_hpet_supported()) strcat(support_str, "HPET ");
+        if (timing_sync_is_rdtscp_supported()) strcat(support_str, "RDTSCP");
+        vga_puts_at(support_str, 13, 40, VGA_CYAN | (VGA_BLACK << 4));
+
+        if (timing_sync_is_tsc_supported()) {
+            u64 tsc_freq = timing_sync_get_tsc_frequency();
+            u8 invariant = timing_sync_is_tsc_invariant();
+
+            char tsc_str[40];
+            sprintf(tsc_str, "TSC: %uMHz %s", (u32)(tsc_freq / 1000000),
+                    invariant ? "Invariant" : "Variable");
+            vga_puts_at(tsc_str, 14, 40, VGA_YELLOW | (VGA_BLACK << 4));
+        }
+
+        if (timing_sync_is_hpet_supported()) {
+            u64 hpet_freq = timing_sync_get_hpet_frequency();
+            u8 num_timers = timing_sync_get_hpet_num_timers();
+            u8 counter_size = timing_sync_get_hpet_counter_size();
+
+            char hpet_str[40];
+            sprintf(hpet_str, "HPET: %uMHz %ut %ub", (u32)(hpet_freq / 1000000),
+                    num_timers, counter_size);
+            vga_puts_at(hpet_str, 15, 40, VGA_GREEN | (VGA_BLACK << 4));
+        }
+
+        u32 sync_ops = timing_sync_get_sync_operations();
+        u32 measurements = timing_sync_get_timing_measurements();
+
+        char stats_str[40];
+        sprintf(stats_str, "Sync: %u Measure: %u", sync_ops, measurements);
+        vga_puts_at(stats_str, 16, 40, VGA_LBLUE | (VGA_BLACK << 4));
+
+        u64 max_latency = timing_sync_get_max_sync_latency();
+        u64 min_latency = timing_sync_get_min_sync_latency();
+
+        char latency_str[40];
+        sprintf(latency_str, "Latency: %u-%u cycles", (u32)min_latency, (u32)max_latency);
+        vga_puts_at(latency_str, 17, 40, VGA_WHITE | (VGA_BLACK << 4));
+    } else {
+        vga_puts_at("Timing & sync not supported", 13, 40, VGA_RED | (VGA_BLACK << 4));
+    }
+
+    while (1) {
+        timer_delay(5000);
+    }
+}
+
 static void system_info_task(void) {
     while (1) {
         /* Update system stats */
@@ -2215,7 +2357,10 @@ void x86_pc_demo_init(void) {
     task_create(freq_scaling_demo_task, 54, 256);
     task_create(system_ctrl_demo_task, 55, 256);
     task_create(cpu_ext_demo_task, 56, 256);
-    task_create(system_info_task, 57, 256);
+    task_create(microarch_demo_task, 57, 256);
+    task_create(apic_ext_demo_task, 58, 256);
+    task_create(timing_sync_demo_task, 59, 256);
+    task_create(system_info_task, 60, 256);
 }
 
 /* Simple string functions */

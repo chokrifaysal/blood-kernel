@@ -6,7 +6,7 @@
 
 const char *arch_name(void) { return "x86-32"; }
 const char *mcu_name(void)  { return "QEMU-i686"; }
-const char *boot_name(void) { return "Freq+System+CPUExt"; }
+const char *boot_name(void) { return "Microarch+APIC+Timing"; }
 
 void vga_init(void);
 void ps2_kbd_init(void);
@@ -65,6 +65,9 @@ void security_ext_init(void);
 void freq_scaling_init(void);
 void system_ctrl_init(void);
 void cpu_ext_init(void);
+void microarch_init(void);
+void apic_ext_init(void);
+void timing_sync_init(void);
 void x86_pc_demo_init(void);
 
 void clock_init(void) {
@@ -179,6 +182,15 @@ void clock_init(void) {
 
     /* Initialize CPU extensions */
     cpu_ext_init();
+
+    /* Initialize microarchitecture control */
+    microarch_init();
+
+    /* Initialize APIC extensions */
+    apic_ext_init();
+
+    /* Initialize timing and synchronization */
+    timing_sync_init();
 
     /* Initialize ACPI */
     acpi_init();

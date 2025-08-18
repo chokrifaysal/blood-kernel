@@ -7,6 +7,9 @@
 - **PIC**: 8259A Programmable Interrupt Controller with IRQ management
 - **MMU**: 4KB page-based memory management with demand paging
 - **CPUID**: CPU identification and feature detection
+- **Microarch**: CPU microarchitecture control and speculation mitigation
+- **APIC Ext**: Advanced interrupt handling with x2APIC and IPI support
+- **Timing Sync**: TSC/HPET timing and CPU synchronization primitives
 - **Freq Scaling**: P-states/Turbo frequency scaling and power management
 - **System Ctrl**: SMM/ACPI system control and power state management
 - **CPU Ext**: AVX-512/AMX instruction set extensions and XSAVE
@@ -290,6 +293,27 @@ qemu-system-x86_64 -kernel build/kernel.bin
 - System reset and shutdown control
 - Wake event management
 - Uptime and reset cause tracking
+
+### Microarchitecture Control
+- Branch prediction and speculation control
+- IBRS/STIBP/SSBD mitigation support
+- Indirect branch prediction barrier (IBPB)
+- LBR (Last Branch Record) monitoring
+- Vulnerability detection and mitigation
+
+### APIC Extensions
+- x2APIC mode with MSR-based access
+- Inter-processor interrupt (IPI) management
+- APIC timer with multiple modes
+- Interrupt priority and error handling
+- Broadcast and targeted IPI operations
+
+### Timing and Synchronization
+- TSC (Time Stamp Counter) with invariant support
+- HPET (High Precision Event Timer) control
+- CPU synchronization barriers
+- Latency measurement and calibration
+- RDTSCP with CPU ID support
 
 ### CPU Extensions
 - AVX-512 instruction set support
