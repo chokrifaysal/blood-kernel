@@ -7,6 +7,9 @@
 - **PIC**: 8259A Programmable Interrupt Controller with IRQ management
 - **MMU**: 4KB page-based memory management with demand paging
 - **CPUID**: CPU identification and feature detection
+- **CPU Topology**: Multi-core/thread topology detection and NUMA awareness
+- **Interrupt Routing**: I/O APIC, MSI, and MSI-X interrupt routing
+- **CPU Errata**: Microcode management and errata workaround application
 - **Cache Coherency**: MESI/MOESI cache coherency protocols and monitoring
 - **Memory Ordering**: Memory barriers, fencing, and atomic operations
 - **Power States**: C-states/P-states power management and thermal control
@@ -324,6 +327,28 @@ qemu-system-x86_64 -kernel build/kernel.bin
 - TSO (Total Store Order) memory model support
 - Memory access violation detection
 - Compiler and hardware barrier synchronization
+
+### CPU Topology
+- Multi-core and multi-thread topology detection
+- APIC ID parsing and hierarchy enumeration
+- Package/die/core/thread relationship mapping
+- Cache sharing level detection and analysis
+- NUMA node awareness and CPU affinity
+- Hybrid topology support (P-cores + E-cores)
+
+### Interrupt Routing
+- I/O APIC redirection table management
+- MSI (Message Signaled Interrupts) configuration
+- MSI-X advanced interrupt handling
+- PCI interrupt routing and delivery modes
+- Interrupt load balancing and affinity control
+
+### CPU Errata Management
+- Intel and AMD errata database and detection
+- Microcode revision tracking and updates
+- Security vulnerability assessment
+- Workaround application and management
+- Critical errata identification and mitigation
 
 ### Power States
 - C-states (C0-C10) power management

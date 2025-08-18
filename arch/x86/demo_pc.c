@@ -65,6 +65,9 @@
 #include "drivers/cache_coherency.h"
 #include "drivers/memory_ordering.h"
 #include "drivers/power_states.h"
+#include "drivers/cpu_topology.h"
+#include "drivers/interrupt_routing.h"
+#include "drivers/cpu_errata.h"
 
 extern void timer_delay(u32 ms);
 
@@ -88,6 +91,9 @@ static void vga_demo_task(void) {
     vga_puts("- Microarch: Branch pred/spec\n");
     vga_puts("- APIC Ext: x2APIC/IPI/Timer\n");
     vga_puts("- Timing: TSC/HPET/Sync\n");
+    vga_puts("- Topology: Cores/Threads/NUMA\n");
+    vga_puts("- Interrupt: IOAPIC/MSI/MSI-X\n");
+    vga_puts("- Errata: Microcode/Workarounds\n");
     vga_puts("- Cache: MESI/MOESI coherency\n");
     vga_puts("- Memory: Ordering/Barriers\n");
     vga_puts("- Power: C-states/P-states\n");
@@ -2425,6 +2431,142 @@ static void power_states_demo_task(void) {
     }
 }
 
+static void cpu_topology_demo_task(void) {
+    vga_puts_at("CPU Topology:", 18, 40, VGA_WHITE | (VGA_BLACK << 4));
+
+    if (cpu_topology_is_supported()) {
+        char support_str[40] = "Support: ";
+        if (cpu_topology_is_x2apic_topology()) strcat(support_str, "x2APIC ");
+        if (cpu_topology_is_hybrid_topology()) strcat(support_str, "Hybrid");
+        vga_puts_at(support_str, 19, 40, VGA_CYAN | (VGA_BLACK << 4));
+
+        u32 packages = cpu_topology_get_num_packages();
+        u32 cores = cpu_topology_get_num_cores();
+        u32 threads = cpu_topology_get_num_threads();
+
+        char topo_str[40];
+        sprintf(topo_str, "Pkg: %u Cores: %u Threads: %u", packages, cores, threads);
+        vga_puts_at(topo_str, 20, 40, VGA_YELLOW | (VGA_BLACK << 4));
+
+        u32 threads_per_core = cpu_topology_get_threads_per_core();
+        u32 cores_per_package = cpu_topology_get_cores_per_package();
+
+        char ratio_str[40];
+        sprintf(ratio_str, "T/C: %u C/P: %u", threads_per_core, cores_per_package);
+        vga_puts_at(ratio_str, 21, 40, VGA_GREEN | (VGA_BLACK << 4));
+
+        u32 bsp_apic_id = cpu_topology_get_bsp_apic_id();
+        u8 numa_nodes = cpu_topology_get_numa_nodes();
+        u32 cache_line_size = cpu_topology_get_cache_line_size();
+
+        char info_str[40];
+        sprintf(info_str, "BSP: %u NUMA: %u CL: %uB", bsp_apic_id, numa_nodes, cache_line_size);
+        vga_puts_at(info_str, 22, 40, VGA_LBLUE | (VGA_BLACK << 4));
+
+        u8 num_levels = cpu_topology_get_num_levels();
+
+        char level_str[40];
+        sprintf(level_str, "Topology Levels: %u", num_levels);
+        vga_puts_at(level_str, 23, 40, VGA_WHITE | (VGA_BLACK << 4));
+    } else {
+        vga_puts_at("CPU topology not supported", 19, 40, VGA_RED | (VGA_BLACK << 4));
+    }
+
+    while (1) {
+        timer_delay(3000);
+    }
+}
+
+static void interrupt_routing_demo_task(void) {
+    vga_set_cursor(12, 60);
+    vga_puts("Interrupt Routing:\n");
+
+    if (interrupt_routing_is_supported()) {
+        char support_str[20] = "Support: ";
+        if (interrupt_routing_is_ioapic_supported()) strcat(support_str, "IOAPIC ");
+        if (interrupt_routing_is_msi_supported()) strcat(support_str, "MSI ");
+        if (interrupt_routing_is_msix_supported()) strcat(support_str, "MSI-X");
+        vga_puts_at(support_str, 13, 60, VGA_CYAN | (VGA_BLACK << 4));
+
+        if (interrupt_routing_is_ioapic_supported()) {
+            u8 num_ioapics = interrupt_routing_get_num_ioapics();
+            const ioapic_info_t* ioapic = interrupt_routing_get_ioapic_info(0);
+
+            if (ioapic) {
+                char ioapic_str[20];
+                sprintf(ioapic_str, "IOAPIC: %u ID:%u V:%u", num_ioapics, ioapic->id, ioapic->version);
+                vga_puts_at(ioapic_str, 14, 60, VGA_YELLOW | (VGA_BLACK << 4));
+
+                char entries_str[20];
+                sprintf(entries_str, "Entries: %u", ioapic->max_redirection_entries);
+                vga_puts_at(entries_str, 15, 60, VGA_GREEN | (VGA_BLACK << 4));
+            }
+        }
+
+        u32 total_routed = interrupt_routing_get_total_interrupts_routed();
+        u32 msi_interrupts = interrupt_routing_get_msi_interrupts();
+        u32 ioapic_interrupts = interrupt_routing_get_ioapic_interrupts();
+
+        char stats_str[20];
+        sprintf(stats_str, "Routed: %u", total_routed);
+        vga_puts_at(stats_str, 16, 60, VGA_LBLUE | (VGA_BLACK << 4));
+
+        char int_str[20];
+        sprintf(int_str, "MSI: %u IOAPIC: %u", msi_interrupts, ioapic_interrupts);
+        vga_puts_at(int_str, 17, 60, VGA_WHITE | (VGA_BLACK << 4));
+    } else {
+        vga_puts_at("Interrupt routing not supported", 13, 60, VGA_RED | (VGA_BLACK << 4));
+    }
+
+    while (1) {
+        timer_delay(4000);
+    }
+}
+
+static void cpu_errata_demo_task(void) {
+    vga_set_cursor(18, 60);
+    vga_puts("CPU Errata:\n");
+
+    if (cpu_errata_is_supported()) {
+        char vendor_str[20] = "Vendor: ";
+        if (cpu_errata_is_intel()) strcat(vendor_str, "Intel");
+        else if (cpu_errata_is_amd()) strcat(vendor_str, "AMD");
+        else strcat(vendor_str, "Unknown");
+        vga_puts_at(vendor_str, 19, 60, VGA_CYAN | (VGA_BLACK << 4));
+
+        u32 cpu_sig = cpu_errata_get_cpu_signature();
+        u32 ucode_rev = cpu_errata_get_microcode_revision();
+
+        char sig_str[20];
+        sprintf(sig_str, "Sig: %08X", cpu_sig);
+        vga_puts_at(sig_str, 20, 60, VGA_YELLOW | (VGA_BLACK << 4));
+
+        char ucode_str[20];
+        sprintf(ucode_str, "uCode: %08X", ucode_rev);
+        vga_puts_at(ucode_str, 21, 60, VGA_GREEN | (VGA_BLACK << 4));
+
+        u32 num_errata = cpu_errata_get_num_errata_found();
+        u8 has_critical = cpu_errata_has_critical_errata();
+
+        char errata_str[20];
+        sprintf(errata_str, "Errata: %u %s", num_errata, has_critical ? "CRIT" : "OK");
+        vga_puts_at(errata_str, 22, 60, has_critical ? VGA_RED | (VGA_BLACK << 4) : VGA_LBLUE | (VGA_BLACK << 4));
+
+        u32 workarounds = cpu_errata_get_workarounds_applied();
+        u8 needs_update = cpu_errata_needs_microcode_update();
+
+        char work_str[20];
+        sprintf(work_str, "Work: %u %s", workarounds, needs_update ? "UPD" : "OK");
+        vga_puts_at(work_str, 23, 60, VGA_WHITE | (VGA_BLACK << 4));
+    } else {
+        vga_puts_at("CPU errata not supported", 19, 60, VGA_RED | (VGA_BLACK << 4));
+    }
+
+    while (1) {
+        timer_delay(5000);
+    }
+}
+
 static void system_info_task(void) {
     while (1) {
         /* Update system stats */
@@ -2506,7 +2648,10 @@ void x86_pc_demo_init(void) {
     task_create(cache_coherency_demo_task, 60, 256);
     task_create(memory_ordering_demo_task, 61, 256);
     task_create(power_states_demo_task, 62, 256);
-    task_create(system_info_task, 63, 256);
+    task_create(cpu_topology_demo_task, 63, 256);
+    task_create(interrupt_routing_demo_task, 64, 256);
+    task_create(cpu_errata_demo_task, 65, 256);
+    task_create(system_info_task, 66, 256);
 }
 
 /* Simple string functions */

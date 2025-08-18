@@ -6,7 +6,7 @@
 
 const char *arch_name(void) { return "x86-32"; }
 const char *mcu_name(void)  { return "QEMU-i686"; }
-const char *boot_name(void) { return "Cache+Memory+Power"; }
+const char *boot_name(void) { return "Topology+Interrupt+Errata"; }
 
 void vga_init(void);
 void ps2_kbd_init(void);
@@ -71,6 +71,9 @@ void timing_sync_init(void);
 void cache_coherency_init(void);
 void memory_ordering_init(void);
 void power_states_init(void);
+void cpu_topology_init(void);
+void interrupt_routing_init(void);
+void cpu_errata_init(void);
 void x86_pc_demo_init(void);
 
 void clock_init(void) {
@@ -203,6 +206,15 @@ void clock_init(void) {
 
     /* Initialize power states */
     power_states_init();
+
+    /* Initialize CPU topology */
+    cpu_topology_init();
+
+    /* Initialize interrupt routing */
+    interrupt_routing_init();
+
+    /* Initialize CPU errata */
+    cpu_errata_init();
 
     /* Initialize ACPI */
     acpi_init();
