@@ -71,6 +71,9 @@
 #include "drivers/virtualization.h"
 #include "drivers/iommu.h"
 #include "drivers/performance_monitoring.h"
+#include "drivers/cpu_security.h"
+#include "drivers/memory_protection_adv.h"
+#include "drivers/cpu_debug_ext.h"
 
 extern void timer_delay(u32 ms);
 
@@ -94,6 +97,9 @@ static void vga_demo_task(void) {
     vga_puts("- Microarch: Branch pred/spec\n");
     vga_puts("- APIC Ext: x2APIC/IPI/Timer\n");
     vga_puts("- Timing: TSC/HPET/Sync\n");
+    vga_puts("- Security: CET/MPX/SMEP/SMAP\n");
+    vga_puts("- MemProt: PKU/NX/Domains\n");
+    vga_puts("- Debug: Intel PT/LBR/BTS\n");
     vga_puts("- Virtualization: VMX/SVM\n");
     vga_puts("- IOMMU: VT-d/AMD-Vi DMA\n");
     vga_puts("- PerfMon: PMC/PMU counters\n");
@@ -2716,6 +2722,153 @@ static void performance_monitoring_demo_task(void) {
     }
 }
 
+static void cpu_security_demo_task(void) {
+    vga_set_cursor(12, 0);
+    vga_puts("CPU Security:\n");
+
+    if (cpu_security_is_supported()) {
+        char support_str[40] = "Support: ";
+        if (cpu_security_is_smep_supported()) strcat(support_str, "SMEP ");
+        if (cpu_security_is_smap_supported()) strcat(support_str, "SMAP ");
+        if (cpu_security_is_cet_supported()) strcat(support_str, "CET ");
+        if (cpu_security_is_mpx_supported()) strcat(support_str, "MPX ");
+        if (cpu_security_is_pku_supported()) strcat(support_str, "PKU");
+        vga_puts_at(support_str, 13, 0, VGA_CYAN | (VGA_BLACK << 4));
+
+        char enabled_str[40] = "Enabled: ";
+        if (cpu_security_is_smep_enabled()) strcat(enabled_str, "SMEP ");
+        if (cpu_security_is_smap_enabled()) strcat(enabled_str, "SMAP ");
+        if (cpu_security_is_cet_user_enabled()) strcat(enabled_str, "CET-U ");
+        if (cpu_security_is_cet_supervisor_enabled()) strcat(enabled_str, "CET-S ");
+        if (cpu_security_is_mpx_enabled()) strcat(enabled_str, "MPX ");
+        if (cpu_security_is_pku_enabled()) strcat(enabled_str, "PKU");
+        vga_puts_at(enabled_str, 14, 0, VGA_YELLOW | (VGA_BLACK << 4));
+
+        u32 total_violations = cpu_security_get_total_violations();
+        u32 smep_violations = cpu_security_get_smep_violations();
+        u32 smap_violations = cpu_security_get_smap_violations();
+
+        char viol_str[40];
+        sprintf(viol_str, "Violations: %u SMEP:%u SMAP:%u", total_violations, smep_violations, smap_violations);
+        vga_puts_at(viol_str, 15, 0, VGA_GREEN | (VGA_BLACK << 4));
+
+        u32 mpx_violations = cpu_security_get_mpx_violations();
+        u32 pkey_violations = cpu_security_get_pkey_violations();
+        u32 active_mitigations = cpu_security_get_active_mitigations();
+
+        char sec_str[40];
+        sprintf(sec_str, "MPX:%u PKU:%u Mitigations:%u", mpx_violations, pkey_violations, active_mitigations);
+        vga_puts_at(sec_str, 16, 0, VGA_LBLUE | (VGA_BLACK << 4));
+
+        if (cpu_security_is_pku_enabled()) {
+            u32 pkru = cpu_security_get_pkru_value();
+            char pkru_str[40];
+            sprintf(pkru_str, "PKRU: %08X", pkru);
+            vga_puts_at(pkru_str, 17, 0, VGA_WHITE | (VGA_BLACK << 4));
+        }
+    } else {
+        vga_puts_at("CPU security not supported", 13, 0, VGA_RED | (VGA_BLACK << 4));
+    }
+
+    while (1) {
+        timer_delay(3000);
+    }
+}
+
+static void memory_protection_demo_task(void) {
+    vga_set_cursor(12, 40);
+    vga_puts("Memory Protection:\n");
+
+    if (memory_protection_adv_is_supported()) {
+        char support_str[40] = "Support: ";
+        if (memory_protection_adv_is_nx_supported()) strcat(support_str, "NX ");
+        if (memory_protection_adv_is_smep_active()) strcat(support_str, "SMEP ");
+        if (memory_protection_adv_is_smap_active()) strcat(support_str, "SMAP ");
+        if (memory_protection_adv_is_pku_active()) strcat(support_str, "PKU ");
+        if (memory_protection_adv_is_cet_active()) strcat(support_str, "CET");
+        vga_puts_at(support_str, 13, 40, VGA_CYAN | (VGA_BLACK << 4));
+
+        u32 regions = memory_protection_adv_get_num_protected_regions();
+        u32 violations = memory_protection_adv_get_num_violations();
+
+        char region_str[40];
+        sprintf(region_str, "Regions: %u Violations: %u", regions, violations);
+        vga_puts_at(region_str, 14, 40, VGA_YELLOW | (VGA_BLACK << 4));
+
+        u32 access_checks = memory_protection_adv_get_total_access_checks();
+        u32 access_denied = memory_protection_adv_get_access_denied_count();
+
+        char access_str[40];
+        sprintf(access_str, "Checks: %u Denied: %u", access_checks, access_denied);
+        vga_puts_at(access_str, 15, 40, VGA_GREEN | (VGA_BLACK << 4));
+
+        u32 pkeys_used = memory_protection_adv_get_protection_keys_used();
+        u64 last_violation = memory_protection_adv_get_last_violation_time();
+
+        char pkey_str[40];
+        sprintf(pkey_str, "PKeys: %08X Last: %u", pkeys_used, (u32)last_violation);
+        vga_puts_at(pkey_str, 16, 40, VGA_LBLUE | (VGA_BLACK << 4));
+
+        char domain_str[40];
+        sprintf(domain_str, "Domains: K/U/D/S");
+        vga_puts_at(domain_str, 17, 40, VGA_WHITE | (VGA_BLACK << 4));
+    } else {
+        vga_puts_at("Memory protection not supported", 13, 40, VGA_RED | (VGA_BLACK << 4));
+    }
+
+    while (1) {
+        timer_delay(4000);
+    }
+}
+
+static void cpu_debug_ext_demo_task(void) {
+    vga_set_cursor(18, 40);
+    vga_puts("CPU Debug Extensions:\n");
+
+    if (cpu_debug_ext_is_supported()) {
+        char support_str[40] = "Support: ";
+        if (cpu_debug_ext_is_intel_pt_supported()) strcat(support_str, "PT ");
+        if (cpu_debug_ext_is_lbr_supported()) strcat(support_str, "LBR ");
+        if (cpu_debug_ext_is_bts_supported()) strcat(support_str, "BTS");
+        vga_puts_at(support_str, 19, 40, VGA_CYAN | (VGA_BLACK << 4));
+
+        char enabled_str[40] = "Enabled: ";
+        if (cpu_debug_ext_is_intel_pt_enabled()) strcat(enabled_str, "PT ");
+        if (cpu_debug_ext_is_lbr_enabled()) strcat(enabled_str, "LBR ");
+        if (cpu_debug_ext_is_bts_enabled()) strcat(enabled_str, "BTS");
+        vga_puts_at(enabled_str, 20, 40, VGA_YELLOW | (VGA_BLACK << 4));
+
+        if (cpu_debug_ext_is_lbr_supported()) {
+            u8 lbr_depth = cpu_debug_ext_get_lbr_depth();
+            u32 lbr_records = cpu_debug_ext_get_lbr_records_captured();
+
+            char lbr_str[40];
+            sprintf(lbr_str, "LBR: Depth %u Records %u", lbr_depth, lbr_records);
+            vga_puts_at(lbr_str, 21, 40, VGA_GREEN | (VGA_BLACK << 4));
+        }
+
+        u32 trace_sessions = cpu_debug_ext_get_total_trace_sessions();
+        u64 trace_time = cpu_debug_ext_get_total_trace_time();
+
+        char trace_str[40];
+        sprintf(trace_str, "Sessions: %u Time: %u", trace_sessions, (u32)trace_time);
+        vga_puts_at(trace_str, 22, 40, VGA_LBLUE | (VGA_BLACK << 4));
+
+        u32 debug_interrupts = cpu_debug_ext_get_debug_interrupts();
+        u32 bts_overflows = cpu_debug_ext_get_bts_buffer_overflows();
+
+        char int_str[40];
+        sprintf(int_str, "Interrupts: %u Overflows: %u", debug_interrupts, bts_overflows);
+        vga_puts_at(int_str, 23, 40, VGA_WHITE | (VGA_BLACK << 4));
+    } else {
+        vga_puts_at("CPU debug extensions not supported", 19, 40, VGA_RED | (VGA_BLACK << 4));
+    }
+
+    while (1) {
+        timer_delay(5000);
+    }
+}
+
 static void system_info_task(void) {
     while (1) {
         /* Update system stats */
@@ -2803,7 +2956,10 @@ void x86_pc_demo_init(void) {
     task_create(virtualization_demo_task, 66, 256);
     task_create(iommu_demo_task, 67, 256);
     task_create(performance_monitoring_demo_task, 68, 256);
-    task_create(system_info_task, 69, 256);
+    task_create(cpu_security_demo_task, 69, 256);
+    task_create(memory_protection_demo_task, 70, 256);
+    task_create(cpu_debug_ext_demo_task, 71, 256);
+    task_create(system_info_task, 72, 256);
 }
 
 /* Simple string functions */

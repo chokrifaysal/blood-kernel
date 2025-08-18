@@ -7,6 +7,9 @@
 - **PIC**: 8259A Programmable Interrupt Controller with IRQ management
 - **MMU**: 4KB page-based memory management with demand paging
 - **CPUID**: CPU identification and feature detection
+- **CPU Security**: CET, MPX, SMEP, SMAP, and PKU security features
+- **Memory Protection**: Advanced memory protection with domains and keys
+- **CPU Debug Extensions**: Intel PT, LBR, and BTS debugging support
 - **Virtualization**: VMX/SVM hardware virtualization support
 - **IOMMU**: Intel VT-d and AMD-Vi I/O memory management
 - **Performance Monitoring**: PMC/PMU architectural performance counters
@@ -398,12 +401,34 @@ qemu-system-x86_64 -kernel build/kernel.bin
 - Tile configuration for AMX
 - Feature usage tracking and statistics
 
+### CPU Security Features
+- Intel CET (Control Flow Enforcement Technology)
+- Shadow stack and indirect branch tracking
+- Intel MPX (Memory Protection Extensions)
+- SMEP (Supervisor Mode Execution Prevention)
+- SMAP (Supervisor Mode Access Prevention)
+- Protection Keys for Userspace (PKU)
+
+### Advanced Memory Protection
+- Memory protection domains and access control
+- Protection key-based page protection
+- NX bit (No-Execute) enforcement
+- Memory access violation tracking
+- Domain-based permission management
+
 ### Security Extensions
 - MPX (Memory Protection Extensions)
 - CET (Control-flow Enforcement Technology)
 - Shadow stack and indirect branch tracking
 - Bounds checking and violation handling
 - NX bit and security enforcement
+
+### CPU Debug Extensions
+- Intel Processor Trace (PT) for execution tracing
+- Last Branch Record (LBR) stack monitoring
+- Branch Trace Store (BTS) for branch recording
+- Debug interrupt handling and overflow management
+- Trace session management and statistics
 
 ### Hardware Tracing
 - Intel PT (Processor Trace)
