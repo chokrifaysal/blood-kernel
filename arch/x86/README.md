@@ -7,6 +7,9 @@
 - **PIC**: 8259A Programmable Interrupt Controller with IRQ management
 - **MMU**: 4KB page-based memory management with demand paging
 - **CPUID**: CPU identification and feature detection
+- **CPU Instruction Extensions**: AVX-512, AMX, and APX instruction sets
+- **System Management Mode**: SMM/SMI handling and SMRAM management
+- **Thermal Management**: RAPL power limits and thermal throttling
 - **CPU Security**: CET, MPX, SMEP, SMAP, and PKU security features
 - **Memory Protection**: Advanced memory protection with domains and keys
 - **CPU Debug Extensions**: Intel PT, LBR, and BTS debugging support
@@ -393,6 +396,27 @@ qemu-system-x86_64 -kernel build/kernel.bin
 - CPU synchronization barriers
 - Latency measurement and calibration
 - RDTSCP with CPU ID support
+
+### CPU Instruction Extensions
+- AVX-512 (Advanced Vector Extensions 512-bit)
+- AMX (Advanced Matrix Extensions) for AI/ML workloads
+- APX (Advanced Performance Extensions)
+- XSAVE/XRSTOR context management
+- Tile register configuration for matrix operations
+
+### System Management Mode
+- SMI (System Management Interrupt) handling
+- SMRAM (System Management RAM) management
+- SMM handler installation and execution
+- SMI source control and monitoring
+- SMM state save and restore operations
+
+### Thermal Management
+- RAPL (Running Average Power Limit) control
+- Thermal monitoring and temperature reading
+- Thermal throttling and PROCHOT detection
+- Power limit enforcement and violation tracking
+- Critical temperature protection
 
 ### CPU Extensions
 - AVX-512 instruction set support

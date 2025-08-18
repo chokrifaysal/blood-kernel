@@ -6,7 +6,7 @@
 
 const char *arch_name(void) { return "x86-32"; }
 const char *mcu_name(void)  { return "QEMU-i686"; }
-const char *boot_name(void) { return "Security+MemProt+Debug"; }
+const char *boot_name(void) { return "InstExt+SMM+Thermal"; }
 
 void vga_init(void);
 void ps2_kbd_init(void);
@@ -80,6 +80,9 @@ void performance_monitoring_init(void);
 void cpu_security_init(void);
 void memory_protection_adv_init(void);
 void cpu_debug_ext_init(void);
+void cpu_instruction_ext_init(void);
+void system_mgmt_mode_init(void);
+void thermal_mgmt_init(void);
 void x86_pc_demo_init(void);
 
 void clock_init(void) {
@@ -239,6 +242,15 @@ void clock_init(void) {
 
     /* Initialize CPU debug extensions */
     cpu_debug_ext_init();
+
+    /* Initialize CPU instruction extensions */
+    cpu_instruction_ext_init();
+
+    /* Initialize system management mode */
+    system_mgmt_mode_init();
+
+    /* Initialize thermal management */
+    thermal_mgmt_init();
 
     /* Initialize ACPI */
     acpi_init();

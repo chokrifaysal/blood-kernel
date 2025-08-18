@@ -74,6 +74,9 @@
 #include "drivers/cpu_security.h"
 #include "drivers/memory_protection_adv.h"
 #include "drivers/cpu_debug_ext.h"
+#include "drivers/cpu_instruction_ext.h"
+#include "drivers/system_mgmt_mode.h"
+#include "drivers/thermal_mgmt.h"
 
 extern void timer_delay(u32 ms);
 
@@ -97,6 +100,9 @@ static void vga_demo_task(void) {
     vga_puts("- Microarch: Branch pred/spec\n");
     vga_puts("- APIC Ext: x2APIC/IPI/Timer\n");
     vga_puts("- Timing: TSC/HPET/Sync\n");
+    vga_puts("- InstExt: AVX-512/AMX/APX\n");
+    vga_puts("- SMM: System Management Mode\n");
+    vga_puts("- Thermal: RAPL/Throttling\n");
     vga_puts("- Security: CET/MPX/SMEP/SMAP\n");
     vga_puts("- MemProt: PKU/NX/Domains\n");
     vga_puts("- Debug: Intel PT/LBR/BTS\n");
@@ -2869,6 +2875,150 @@ static void cpu_debug_ext_demo_task(void) {
     }
 }
 
+static void cpu_instruction_ext_demo_task(void) {
+    vga_set_cursor(12, 0);
+    vga_puts("CPU Instruction Extensions:\n");
+
+    if (cpu_instruction_ext_is_supported()) {
+        char support_str[40] = "Support: ";
+        if (cpu_instruction_ext_is_avx512_supported()) strcat(support_str, "AVX-512 ");
+        if (cpu_instruction_ext_is_amx_supported()) strcat(support_str, "AMX ");
+        if (cpu_instruction_ext_is_apx_supported()) strcat(support_str, "APX");
+        vga_puts_at(support_str, 13, 0, VGA_CYAN | (VGA_BLACK << 4));
+
+        char enabled_str[40] = "Enabled: ";
+        if (cpu_instruction_ext_is_avx512_enabled()) strcat(enabled_str, "AVX-512 ");
+        if (cpu_instruction_ext_is_amx_enabled()) strcat(enabled_str, "AMX ");
+        if (cpu_instruction_ext_is_apx_enabled()) strcat(enabled_str, "APX");
+        vga_puts_at(enabled_str, 14, 0, VGA_YELLOW | (VGA_BLACK << 4));
+
+        if (cpu_instruction_ext_is_avx512_supported()) {
+            u32 avx512_features = cpu_instruction_ext_get_avx512_features();
+            u32 avx512_instructions = cpu_instruction_ext_get_avx512_instructions_executed();
+
+            char avx512_str[40];
+            sprintf(avx512_str, "AVX-512: Features %08X Instr %u", avx512_features, avx512_instructions);
+            vga_puts_at(avx512_str, 15, 0, VGA_GREEN | (VGA_BLACK << 4));
+        }
+
+        if (cpu_instruction_ext_is_amx_supported()) {
+            u8 tiles = cpu_instruction_ext_get_tile_registers_configured();
+            u64 tile_size = cpu_instruction_ext_get_tile_data_size();
+
+            char amx_str[40];
+            sprintf(amx_str, "AMX: Tiles %u Size %u", tiles, (u32)tile_size);
+            vga_puts_at(amx_str, 16, 0, VGA_LBLUE | (VGA_BLACK << 4));
+        }
+
+        u32 context_switches = cpu_instruction_ext_get_total_context_switches();
+        u32 xsave_ops = cpu_instruction_ext_get_xsave_operations();
+
+        char ctx_str[40];
+        sprintf(ctx_str, "Context: %u XSAVE: %u", context_switches, xsave_ops);
+        vga_puts_at(ctx_str, 17, 0, VGA_WHITE | (VGA_BLACK << 4));
+    } else {
+        vga_puts_at("CPU instruction extensions not supported", 13, 0, VGA_RED | (VGA_BLACK << 4));
+    }
+
+    while (1) {
+        timer_delay(3000);
+    }
+}
+
+static void system_mgmt_mode_demo_task(void) {
+    vga_set_cursor(12, 40);
+    vga_puts("System Management Mode:\n");
+
+    if (system_mgmt_mode_is_supported()) {
+        char status_str[40];
+        sprintf(status_str, "Status: %s %s",
+                system_mgmt_mode_is_enabled() ? "Enabled" : "Disabled",
+                system_mgmt_mode_is_locked() ? "Locked" : "Unlocked");
+        vga_puts_at(status_str, 13, 40, VGA_CYAN | (VGA_BLACK << 4));
+
+        u64 smram_base = system_mgmt_mode_get_smram_base();
+        u32 smram_size = system_mgmt_mode_get_smram_size();
+
+        char smram_str[40];
+        sprintf(smram_str, "SMRAM: %08X Size: %uKB", (u32)smram_base, smram_size / 1024);
+        vga_puts_at(smram_str, 14, 40, VGA_YELLOW | (VGA_BLACK << 4));
+
+        u32 smi_count = system_mgmt_mode_get_total_smi_count();
+        u32 smm_entries = system_mgmt_mode_get_smm_entries();
+
+        char smi_str[40];
+        sprintf(smi_str, "SMI Count: %u Entries: %u", smi_count, smm_entries);
+        vga_puts_at(smi_str, 15, 40, VGA_GREEN | (VGA_BLACK << 4));
+
+        u32 smi_sources = system_mgmt_mode_get_smi_sources_enabled();
+        u8 handler_installed = system_mgmt_mode_is_handler_installed();
+
+        char handler_str[40];
+        sprintf(handler_str, "Sources: %08X Handler: %s", smi_sources, handler_installed ? "Yes" : "No");
+        vga_puts_at(handler_str, 16, 40, VGA_LBLUE | (VGA_BLACK << 4));
+
+        u64 smm_time = system_mgmt_mode_get_total_smm_time();
+        u32 smm_revision = system_mgmt_mode_get_smm_revision();
+
+        char time_str[40];
+        sprintf(time_str, "Time: %u Rev: %08X", (u32)smm_time, smm_revision);
+        vga_puts_at(time_str, 17, 40, VGA_WHITE | (VGA_BLACK << 4));
+    } else {
+        vga_puts_at("System Management Mode not supported", 13, 40, VGA_RED | (VGA_BLACK << 4));
+    }
+
+    while (1) {
+        timer_delay(4000);
+    }
+}
+
+static void thermal_mgmt_demo_task(void) {
+    vga_set_cursor(18, 0);
+    vga_puts("Thermal Management:\n");
+
+    if (thermal_mgmt_is_supported()) {
+        char support_str[40] = "Support: ";
+        if (thermal_mgmt_is_thermal_monitoring_supported()) strcat(support_str, "Thermal ");
+        if (thermal_mgmt_is_rapl_supported()) strcat(support_str, "RAPL");
+        vga_puts_at(support_str, 19, 0, VGA_CYAN | (VGA_BLACK << 4));
+
+        u32 current_temp = thermal_mgmt_get_current_temperature();
+        u32 target_temp = thermal_mgmt_get_thermal_target();
+        u32 critical_temp = thermal_mgmt_get_critical_temperature();
+
+        char temp_str[40];
+        sprintf(temp_str, "Temp: %u°C Target: %u°C Crit: %u°C", current_temp, target_temp, critical_temp);
+        vga_puts_at(temp_str, 20, 0, VGA_YELLOW | (VGA_BLACK << 4));
+
+        char status_str[40] = "Status: ";
+        if (thermal_mgmt_is_thermal_throttling_active()) strcat(status_str, "THROTTLE ");
+        if (thermal_mgmt_is_prochot_active()) strcat(status_str, "PROCHOT ");
+        if (thermal_mgmt_is_critical_temp_reached()) strcat(status_str, "CRITICAL");
+        if (strlen(status_str) == 8) strcat(status_str, "Normal");
+        vga_puts_at(status_str, 21, 0, VGA_GREEN | (VGA_BLACK << 4));
+
+        u32 throttle_count = thermal_mgmt_get_throttle_count();
+        u32 thermal_events = thermal_mgmt_get_thermal_events_count();
+
+        char event_str[40];
+        sprintf(event_str, "Throttles: %u Events: %u", throttle_count, thermal_events);
+        vga_puts_at(event_str, 22, 0, VGA_LBLUE | (VGA_BLACK << 4));
+
+        if (thermal_mgmt_is_rapl_supported()) {
+            const rapl_info_t* rapl = thermal_mgmt_get_rapl_info();
+            char rapl_str[40];
+            sprintf(rapl_str, "RAPL: PL1 %uW PL2 %uW", rapl->pkg_power_limit_1, rapl->pkg_power_limit_2);
+            vga_puts_at(rapl_str, 23, 0, VGA_WHITE | (VGA_BLACK << 4));
+        }
+    } else {
+        vga_puts_at("Thermal management not supported", 19, 0, VGA_RED | (VGA_BLACK << 4));
+    }
+
+    while (1) {
+        timer_delay(2000);
+    }
+}
+
 static void system_info_task(void) {
     while (1) {
         /* Update system stats */
@@ -2959,7 +3109,10 @@ void x86_pc_demo_init(void) {
     task_create(cpu_security_demo_task, 69, 256);
     task_create(memory_protection_demo_task, 70, 256);
     task_create(cpu_debug_ext_demo_task, 71, 256);
-    task_create(system_info_task, 72, 256);
+    task_create(cpu_instruction_ext_demo_task, 72, 256);
+    task_create(system_mgmt_mode_demo_task, 73, 256);
+    task_create(thermal_mgmt_demo_task, 74, 256);
+    task_create(system_info_task, 75, 256);
 }
 
 /* Simple string functions */
