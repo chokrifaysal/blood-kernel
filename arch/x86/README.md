@@ -7,6 +7,9 @@
 - **PIC**: 8259A Programmable Interrupt Controller with IRQ management
 - **MMU**: 4KB page-based memory management with demand paging
 - **CPUID**: CPU identification and feature detection
+- **Cache Coherency**: MESI/MOESI cache coherency protocols and monitoring
+- **Memory Ordering**: Memory barriers, fencing, and atomic operations
+- **Power States**: C-states/P-states power management and thermal control
 - **Microarch**: CPU microarchitecture control and speculation mitigation
 - **APIC Ext**: Advanced interrupt handling with x2APIC and IPI support
 - **Timing Sync**: TSC/HPET timing and CPU synchronization primitives
@@ -307,6 +310,27 @@ qemu-system-x86_64 -kernel build/kernel.bin
 - APIC timer with multiple modes
 - Interrupt priority and error handling
 - Broadcast and targeted IPI operations
+
+### Cache Coherency
+- MESI/MOESI cache coherency protocols
+- Cache line state monitoring and tracking
+- Cache flush, invalidate, and writeback operations
+- Snoop hit/miss detection and handling
+- Cache hierarchy enumeration and control
+
+### Memory Ordering
+- Memory barriers and fencing (LFENCE/SFENCE/MFENCE)
+- Atomic operations with memory ordering semantics
+- TSO (Total Store Order) memory model support
+- Memory access violation detection
+- Compiler and hardware barrier synchronization
+
+### Power States
+- C-states (C0-C10) power management
+- P-states (P0-P7) performance scaling
+- MWAIT-based deep sleep states
+- Thermal monitoring and throttling detection
+- Power transition tracking and statistics
 
 ### Timing and Synchronization
 - TSC (Time Stamp Counter) with invariant support

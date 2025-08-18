@@ -62,6 +62,9 @@
 #include "drivers/microarch.h"
 #include "drivers/apic_ext.h"
 #include "drivers/timing_sync.h"
+#include "drivers/cache_coherency.h"
+#include "drivers/memory_ordering.h"
+#include "drivers/power_states.h"
 
 extern void timer_delay(u32 ms);
 
@@ -85,6 +88,9 @@ static void vga_demo_task(void) {
     vga_puts("- Microarch: Branch pred/spec\n");
     vga_puts("- APIC Ext: x2APIC/IPI/Timer\n");
     vga_puts("- Timing: TSC/HPET/Sync\n");
+    vga_puts("- Cache: MESI/MOESI coherency\n");
+    vga_puts("- Memory: Ordering/Barriers\n");
+    vga_puts("- Power: C-states/P-states\n");
     vga_puts("- Microarch: Branch pred/spec\n");
     vga_puts("- APIC Ext: x2APIC/IPI/Timer\n");
     vga_puts("- Timing: TSC/HPET/Sync\n");
@@ -2282,6 +2288,143 @@ static void timing_sync_demo_task(void) {
     }
 }
 
+static void cache_coherency_demo_task(void) {
+    vga_puts_at("Cache Coherency:", 12, 0, VGA_WHITE | (VGA_BLACK << 4));
+
+    if (cache_coherency_is_supported()) {
+        char support_str[40] = "Support: ";
+        if (cache_coherency_is_mesi_supported()) strcat(support_str, "MESI ");
+        if (cache_coherency_is_moesi_supported()) strcat(support_str, "MOESI ");
+        if (cache_coherency_is_monitoring_supported()) strcat(support_str, "Monitor");
+        vga_puts_at(support_str, 13, 0, VGA_CYAN | (VGA_BLACK << 4));
+
+        u8 num_levels = cache_coherency_get_num_levels();
+        const cache_level_info_t* l1 = cache_coherency_get_level_info(0);
+
+        if (l1) {
+            char cache_str[40];
+            sprintf(cache_str, "L1: %uKB %uB/line %u-way", l1->size_kb, l1->line_size, l1->associativity);
+            vga_puts_at(cache_str, 14, 0, VGA_YELLOW | (VGA_BLACK << 4));
+        }
+
+        u32 operations = cache_coherency_get_total_operations();
+        u32 coherency_trans = cache_coherency_get_coherency_transactions();
+        u32 snoop_hits = cache_coherency_get_snoop_hits();
+
+        char stats_str[40];
+        sprintf(stats_str, "Ops: %u Coherency: %u Snoop: %u", operations, coherency_trans, snoop_hits);
+        vga_puts_at(stats_str, 15, 0, VGA_GREEN | (VGA_BLACK << 4));
+
+        u32 flushes = cache_coherency_get_cache_flushes();
+        u32 invalidations = cache_coherency_get_cache_invalidations();
+
+        char flush_str[40];
+        sprintf(flush_str, "Flushes: %u Invalidations: %u", flushes, invalidations);
+        vga_puts_at(flush_str, 16, 0, VGA_LBLUE | (VGA_BLACK << 4));
+    } else {
+        vga_puts_at("Cache coherency not supported", 13, 0, VGA_RED | (VGA_BLACK << 4));
+    }
+
+    while (1) {
+        timer_delay(3000);
+    }
+}
+
+static void memory_ordering_demo_task(void) {
+    vga_puts_at("Memory Ordering:", 12, 40, VGA_WHITE | (VGA_BLACK << 4));
+
+    if (memory_ordering_is_supported()) {
+        u8 strong_ordering = memory_ordering_is_strong_ordering();
+        u8 memory_model = memory_ordering_get_memory_model();
+
+        char model_str[40];
+        sprintf(model_str, "Model: %s %s", memory_ordering_get_memory_model_name(memory_model),
+                strong_ordering ? "(Strong)" : "(Weak)");
+        vga_puts_at(model_str, 13, 40, VGA_CYAN | (VGA_BLACK << 4));
+
+        u32 total_fences = memory_ordering_get_total_fences();
+        u32 load_fences = memory_ordering_get_load_fences();
+        u32 store_fences = memory_ordering_get_store_fences();
+        u32 full_fences = memory_ordering_get_full_fences();
+
+        char fence_str[40];
+        sprintf(fence_str, "Fences: %u L:%u S:%u F:%u", total_fences, load_fences, store_fences, full_fences);
+        vga_puts_at(fence_str, 14, 40, VGA_YELLOW | (VGA_BLACK << 4));
+
+        u64 max_latency = memory_ordering_get_max_fence_latency();
+        u64 min_latency = memory_ordering_get_min_fence_latency();
+        u32 violations = memory_ordering_get_ordering_violations();
+
+        char latency_str[40];
+        sprintf(latency_str, "Latency: %u-%u Violations: %u", (u32)min_latency, (u32)max_latency, violations);
+        vga_puts_at(latency_str, 15, 40, VGA_GREEN | (VGA_BLACK << 4));
+
+        u32 serialize_fences = memory_ordering_get_serialize_fences();
+
+        char serialize_str[40];
+        sprintf(serialize_str, "Serialize: %u", serialize_fences);
+        vga_puts_at(serialize_str, 16, 40, VGA_LBLUE | (VGA_BLACK << 4));
+    } else {
+        vga_puts_at("Memory ordering not supported", 13, 40, VGA_RED | (VGA_BLACK << 4));
+    }
+
+    while (1) {
+        timer_delay(4000);
+    }
+}
+
+static void power_states_demo_task(void) {
+    vga_set_cursor(18, 0);
+    vga_puts("Power States:\n");
+
+    if (power_states_is_supported()) {
+        char support_str[40] = "Support: ";
+        if (power_states_is_cstates_supported()) strcat(support_str, "C-states ");
+        if (power_states_is_pstates_supported()) strcat(support_str, "P-states");
+        vga_puts_at(support_str, 19, 0, VGA_CYAN | (VGA_BLACK << 4));
+
+        if (power_states_is_cstates_supported()) {
+            u8 current_cstate = power_states_get_current_cstate();
+            u8 max_cstate = power_states_get_max_cstate();
+            u8 num_cstates = power_states_get_num_cstates();
+
+            char cstate_str[40];
+            sprintf(cstate_str, "C-states: %u Current: C%u Max: C%u", num_cstates, current_cstate, max_cstate);
+            vga_puts_at(cstate_str, 20, 0, VGA_YELLOW | (VGA_BLACK << 4));
+        }
+
+        if (power_states_is_pstates_supported()) {
+            u8 current_pstate = power_states_get_current_pstate();
+            u8 max_pstate = power_states_get_max_pstate();
+            u8 num_pstates = power_states_get_num_pstates();
+
+            char pstate_str[40];
+            sprintf(pstate_str, "P-states: %u Current: P%u Max: P%u", num_pstates, current_pstate, max_pstate);
+            vga_puts_at(pstate_str, 21, 0, VGA_GREEN | (VGA_BLACK << 4));
+        }
+
+        u64 transitions = power_states_get_total_transitions();
+        u64 cstate_residency = power_states_get_total_cstate_residency();
+
+        char stats_str[40];
+        sprintf(stats_str, "Transitions: %u Residency: %u", (u32)transitions, (u32)cstate_residency);
+        vga_puts_at(stats_str, 22, 0, VGA_LBLUE | (VGA_BLACK << 4));
+
+        u16 temperature = power_states_get_current_temperature();
+        u8 thermal_throttling = power_states_is_thermal_throttling();
+
+        char thermal_str[40];
+        sprintf(thermal_str, "Temp: %uC Throttling: %s", temperature, thermal_throttling ? "Yes" : "No");
+        vga_puts_at(thermal_str, 23, 0, VGA_WHITE | (VGA_BLACK << 4));
+    } else {
+        vga_puts_at("Power states not supported", 19, 0, VGA_RED | (VGA_BLACK << 4));
+    }
+
+    while (1) {
+        timer_delay(5000);
+    }
+}
+
 static void system_info_task(void) {
     while (1) {
         /* Update system stats */
@@ -2360,7 +2503,10 @@ void x86_pc_demo_init(void) {
     task_create(microarch_demo_task, 57, 256);
     task_create(apic_ext_demo_task, 58, 256);
     task_create(timing_sync_demo_task, 59, 256);
-    task_create(system_info_task, 60, 256);
+    task_create(cache_coherency_demo_task, 60, 256);
+    task_create(memory_ordering_demo_task, 61, 256);
+    task_create(power_states_demo_task, 62, 256);
+    task_create(system_info_task, 63, 256);
 }
 
 /* Simple string functions */

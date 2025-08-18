@@ -6,7 +6,7 @@
 
 const char *arch_name(void) { return "x86-32"; }
 const char *mcu_name(void)  { return "QEMU-i686"; }
-const char *boot_name(void) { return "Microarch+APIC+Timing"; }
+const char *boot_name(void) { return "Cache+Memory+Power"; }
 
 void vga_init(void);
 void ps2_kbd_init(void);
@@ -68,6 +68,9 @@ void cpu_ext_init(void);
 void microarch_init(void);
 void apic_ext_init(void);
 void timing_sync_init(void);
+void cache_coherency_init(void);
+void memory_ordering_init(void);
+void power_states_init(void);
 void x86_pc_demo_init(void);
 
 void clock_init(void) {
@@ -191,6 +194,15 @@ void clock_init(void) {
 
     /* Initialize timing and synchronization */
     timing_sync_init();
+
+    /* Initialize cache coherency */
+    cache_coherency_init();
+
+    /* Initialize memory ordering */
+    memory_ordering_init();
+
+    /* Initialize power states */
+    power_states_init();
 
     /* Initialize ACPI */
     acpi_init();
