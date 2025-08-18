@@ -285,7 +285,7 @@ u8 iommu_create_domain(u16 domain_id, u8 bus, u8 device, u8 function) {
 }
 
 u8 iommu_map_page(u16 domain_id, u64 iova, u64 physical_addr, u8 read, u8 write) {
-    return 1;
+3    return 1;
 }
 
 u8 iommu_unmap_page(u16 domain_id, u64 iova) {

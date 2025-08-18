@@ -7,6 +7,9 @@
 - **PIC**: 8259A Programmable Interrupt Controller with IRQ management
 - **MMU**: 4KB page-based memory management with demand paging
 - **CPUID**: CPU identification and feature detection
+- **Virtualization**: VMX/SVM hardware virtualization support
+- **IOMMU**: Intel VT-d and AMD-Vi I/O memory management
+- **Performance Monitoring**: PMC/PMU architectural performance counters
 - **CPU Topology**: Multi-core/thread topology detection and NUMA awareness
 - **Interrupt Routing**: I/O APIC, MSI, and MSI-X interrupt routing
 - **CPU Errata**: Microcode management and errata workaround application
@@ -342,6 +345,30 @@ qemu-system-x86_64 -kernel build/kernel.bin
 - MSI-X advanced interrupt handling
 - PCI interrupt routing and delivery modes
 - Interrupt load balancing and affinity control
+
+### Virtualization Extensions
+- Intel VMX (Virtual Machine Extensions) support
+- AMD SVM (Secure Virtual Machine) support
+- VMCS (Virtual Machine Control Structure) management
+- VMCB (Virtual Machine Control Block) handling
+- EPT (Extended Page Tables) and NPT (Nested Page Tables)
+- VPID (Virtual Processor Identifier) support
+
+### IOMMU Support
+- Intel VT-d (Virtualization Technology for Directed I/O)
+- AMD-Vi (AMD I/O Virtualization Technology)
+- DMA remapping and translation
+- Interrupt remapping and routing
+- DMAR (DMA Remapping) unit management
+- IOTLB (I/O Translation Lookaside Buffer) control
+
+### Performance Monitoring
+- Architectural Performance Monitoring (PMU)
+- General-purpose performance counters (PMC)
+- Fixed-function performance counters
+- Instructions retired and CPU cycles tracking
+- Cache miss and branch prediction monitoring
+- IPC (Instructions Per Cycle) calculation
 
 ### CPU Errata Management
 - Intel and AMD errata database and detection

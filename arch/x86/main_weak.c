@@ -6,7 +6,7 @@
 
 const char *arch_name(void) { return "x86-32"; }
 const char *mcu_name(void)  { return "QEMU-i686"; }
-const char *boot_name(void) { return "Topology+Interrupt+Errata"; }
+const char *boot_name(void) { return "Virtualization+IOMMU+PerfMon"; }
 
 void vga_init(void);
 void ps2_kbd_init(void);
@@ -74,6 +74,9 @@ void power_states_init(void);
 void cpu_topology_init(void);
 void interrupt_routing_init(void);
 void cpu_errata_init(void);
+void virtualization_init(void);
+void iommu_init(void);
+void performance_monitoring_init(void);
 void x86_pc_demo_init(void);
 
 void clock_init(void) {
@@ -215,6 +218,15 @@ void clock_init(void) {
 
     /* Initialize CPU errata */
     cpu_errata_init();
+
+    /* Initialize virtualization */
+    virtualization_init();
+
+    /* Initialize IOMMU */
+    iommu_init();
+
+    /* Initialize performance monitoring */
+    performance_monitoring_init();
 
     /* Initialize ACPI */
     acpi_init();

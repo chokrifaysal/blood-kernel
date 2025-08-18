@@ -68,6 +68,9 @@
 #include "drivers/cpu_topology.h"
 #include "drivers/interrupt_routing.h"
 #include "drivers/cpu_errata.h"
+#include "drivers/virtualization.h"
+#include "drivers/iommu.h"
+#include "drivers/performance_monitoring.h"
 
 extern void timer_delay(u32 ms);
 
@@ -91,6 +94,9 @@ static void vga_demo_task(void) {
     vga_puts("- Microarch: Branch pred/spec\n");
     vga_puts("- APIC Ext: x2APIC/IPI/Timer\n");
     vga_puts("- Timing: TSC/HPET/Sync\n");
+    vga_puts("- Virtualization: VMX/SVM\n");
+    vga_puts("- IOMMU: VT-d/AMD-Vi DMA\n");
+    vga_puts("- PerfMon: PMC/PMU counters\n");
     vga_puts("- Topology: Cores/Threads/NUMA\n");
     vga_puts("- Interrupt: IOAPIC/MSI/MSI-X\n");
     vga_puts("- Errata: Microcode/Workarounds\n");
@@ -2567,6 +2573,149 @@ static void cpu_errata_demo_task(void) {
     }
 }
 
+static void virtualization_demo_task(void) {
+    vga_set_cursor(12, 0);
+    vga_puts("Virtualization:\n");
+
+    if (virtualization_is_supported()) {
+        char support_str[40] = "Support: ";
+        if (virtualization_is_vmx_supported()) strcat(support_str, "VMX ");
+        if (virtualization_is_svm_supported()) strcat(support_str, "SVM");
+        vga_puts_at(support_str, 13, 0, VGA_CYAN | (VGA_BLACK << 4));
+
+        char enabled_str[40] = "Enabled: ";
+        if (virtualization_is_vmx_enabled()) strcat(enabled_str, "VMX ");
+        if (virtualization_is_svm_enabled()) strcat(enabled_str, "SVM");
+        vga_puts_at(enabled_str, 14, 0, VGA_YELLOW | (VGA_BLACK << 4));
+
+        if (virtualization_is_vmx_supported()) {
+            u32 vmx_caps = virtualization_get_vmx_capabilities();
+            char caps_str[40] = "VMX: ";
+            if (virtualization_has_ept()) strcat(caps_str, "EPT ");
+            if (virtualization_has_vpid()) strcat(caps_str, "VPID ");
+            if (virtualization_has_unrestricted_guest()) strcat(caps_str, "UG");
+            vga_puts_at(caps_str, 15, 0, VGA_GREEN | (VGA_BLACK << 4));
+
+            u32 vmcs_rev = virtualization_get_vmcs_revision_id();
+            u32 vmcs_size = virtualization_get_vmcs_size();
+
+            char vmcs_str[40];
+            sprintf(vmcs_str, "VMCS: Rev %08X Size %u", vmcs_rev, vmcs_size);
+            vga_puts_at(vmcs_str, 16, 0, VGA_LBLUE | (VGA_BLACK << 4));
+        }
+
+        if (virtualization_is_svm_supported()) {
+            u32 svm_caps = virtualization_get_svm_capabilities();
+            char caps_str[40] = "SVM: ";
+            if (virtualization_has_npt()) strcat(caps_str, "NPT");
+            vga_puts_at(caps_str, 15, 0, VGA_GREEN | (VGA_BLACK << 4));
+        }
+
+        u32 vm_entries = virtualization_get_vm_entries();
+        u32 vm_exits = virtualization_get_vm_exits();
+
+        char stats_str[40];
+        sprintf(stats_str, "Entries: %u Exits: %u", vm_entries, vm_exits);
+        vga_puts_at(stats_str, 17, 0, VGA_WHITE | (VGA_BLACK << 4));
+    } else {
+        vga_puts_at("Virtualization not supported", 13, 0, VGA_RED | (VGA_BLACK << 4));
+    }
+
+    while (1) {
+        timer_delay(3000);
+    }
+}
+
+static void iommu_demo_task(void) {
+    vga_set_cursor(12, 40);
+    vga_puts("IOMMU:\n");
+
+    if (iommu_is_supported()) {
+        char support_str[40] = "Support: ";
+        if (iommu_is_intel_vtd_supported()) strcat(support_str, "VT-d ");
+        if (iommu_is_amd_vi_supported()) strcat(support_str, "AMD-Vi");
+        vga_puts_at(support_str, 13, 40, VGA_CYAN | (VGA_BLACK << 4));
+
+        char enabled_str[40];
+        sprintf(enabled_str, "Enabled: %s", iommu_is_enabled() ? "Yes" : "No");
+        vga_puts_at(enabled_str, 14, 40, VGA_YELLOW | (VGA_BLACK << 4));
+
+        char trans_str[40];
+        sprintf(trans_str, "Translation: %s", iommu_is_translation_enabled() ? "On" : "Off");
+        vga_puts_at(trans_str, 15, 40, VGA_GREEN | (VGA_BLACK << 4));
+
+        u32 num_drhd = iommu_get_num_drhd_units();
+        u32 domains = iommu_get_domain_count();
+        u32 devices = iommu_get_device_count();
+
+        char units_str[40];
+        sprintf(units_str, "DRHD: %u Dom: %u Dev: %u", num_drhd, domains, devices);
+        vga_puts_at(units_str, 16, 40, VGA_LBLUE | (VGA_BLACK << 4));
+
+        u32 faults = iommu_get_translation_faults();
+        u32 invalidations = iommu_get_invalidation_requests();
+
+        char stats_str[40];
+        sprintf(stats_str, "Faults: %u Inval: %u", faults, invalidations);
+        vga_puts_at(stats_str, 17, 40, VGA_WHITE | (VGA_BLACK << 4));
+    } else {
+        vga_puts_at("IOMMU not supported", 13, 40, VGA_RED | (VGA_BLACK << 4));
+    }
+
+    while (1) {
+        timer_delay(4000);
+    }
+}
+
+static void performance_monitoring_demo_task(void) {
+    vga_set_cursor(18, 0);
+    vga_puts("Performance Monitoring:\n");
+
+    if (performance_monitoring_is_supported()) {
+        u8 version = performance_monitoring_get_version();
+        u8 gp_counters = performance_monitoring_get_num_gp_counters();
+        u8 fixed_counters = performance_monitoring_get_num_fixed_counters();
+
+        char info_str[40];
+        sprintf(info_str, "Ver: %u GP: %u Fixed: %u", version, gp_counters, fixed_counters);
+        vga_puts_at(info_str, 19, 0, VGA_CYAN | (VGA_BLACK << 4));
+
+        u8 gp_width = performance_monitoring_get_gp_counter_width();
+        u8 fixed_width = performance_monitoring_get_fixed_counter_width();
+
+        char width_str[40];
+        sprintf(width_str, "Width: GP %ub Fixed %ub", gp_width, fixed_width);
+        vga_puts_at(width_str, 20, 0, VGA_YELLOW | (VGA_BLACK << 4));
+
+        u64 instructions = performance_monitoring_get_instructions_retired();
+        u64 cycles = performance_monitoring_get_cpu_cycles();
+
+        char perf_str[40];
+        sprintf(perf_str, "Instr: %u Cycles: %u", (u32)instructions, (u32)cycles);
+        vga_puts_at(perf_str, 21, 0, VGA_GREEN | (VGA_BLACK << 4));
+
+        u32 ipc = performance_monitoring_calculate_ipc();
+        u32 samples = performance_monitoring_get_total_samples();
+
+        char stats_str[40];
+        sprintf(stats_str, "IPC: %u.%03u Samples: %u", ipc / 1000, ipc % 1000, samples);
+        vga_puts_at(stats_str, 22, 0, VGA_LBLUE | (VGA_BLACK << 4));
+
+        u32 overflows = performance_monitoring_get_overflow_interrupts();
+        u64 monitor_time = performance_monitoring_get_total_monitoring_time();
+
+        char time_str[40];
+        sprintf(time_str, "Overflows: %u Time: %u", overflows, (u32)monitor_time);
+        vga_puts_at(time_str, 23, 0, VGA_WHITE | (VGA_BLACK << 4));
+    } else {
+        vga_puts_at("Performance monitoring not supported", 19, 0, VGA_RED | (VGA_BLACK << 4));
+    }
+
+    while (1) {
+        timer_delay(2000);
+    }
+}
+
 static void system_info_task(void) {
     while (1) {
         /* Update system stats */
@@ -2651,7 +2800,10 @@ void x86_pc_demo_init(void) {
     task_create(cpu_topology_demo_task, 63, 256);
     task_create(interrupt_routing_demo_task, 64, 256);
     task_create(cpu_errata_demo_task, 65, 256);
-    task_create(system_info_task, 66, 256);
+    task_create(virtualization_demo_task, 66, 256);
+    task_create(iommu_demo_task, 67, 256);
+    task_create(performance_monitoring_demo_task, 68, 256);
+    task_create(system_info_task, 69, 256);
 }
 
 /* Simple string functions */
