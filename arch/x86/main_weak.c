@@ -83,6 +83,7 @@ void cpu_debug_ext_init(void);
 void cpu_instruction_ext_init(void);
 void system_mgmt_mode_init(void);
 void thermal_mgmt_init(void);
+void hwcrypto_init(void);
 void x86_pc_demo_init(void);
 
 void clock_init(void) {
@@ -251,6 +252,9 @@ void clock_init(void) {
 
     /* Initialize thermal management */
     thermal_mgmt_init();
+
+    /* Initialize hardware cryptography */
+    hwcrypto_init();
 
     /* Initialize ACPI */
     acpi_init();

@@ -77,6 +77,7 @@
 #include "drivers/cpu_instruction_ext.h"
 #include "drivers/system_mgmt_mode.h"
 #include "drivers/thermal_mgmt.h"
+#include "drivers/hwcrypto.h"
 
 extern void timer_delay(u32 ms);
 
@@ -3019,6 +3020,64 @@ static void thermal_mgmt_demo_task(void) {
     }
 }
 
+static void hwcrypto_demo_task(void) {
+    hwcrypto_init();
+
+    vga_set_cursor(18, 40);
+    vga_puts("Hardware Crypto:\n");
+
+    if (hwcrypto_is_supported()) {
+        char caps_str[40] = "Support: ";
+        if (hwcrypto_has_aesni()) strcat(caps_str, "AES ");
+        if (hwcrypto_has_shani()) strcat(caps_str, "SHA ");
+        if (hwcrypto_has_rdrand()) strcat(caps_str, "RNG");
+        vga_puts_at(caps_str, 19, 40, VGA_CYAN | (VGA_BLACK << 4));
+
+        /* Run self-test */
+        u8 self_test = hwcrypto_self_test();
+        char test_str[40];
+        sprintf(test_str, "Self-test: %s", self_test ? "PASS" : "FAIL");
+        vga_puts_at(test_str, 20, 40, self_test ? VGA_GREEN : VGA_RED | (VGA_BLACK << 4));
+
+        /* Show benchmarks */
+        if (hwcrypto_has_aesni()) {
+            u32 aes_cycles = hwcrypto_benchmark_aes(1000);
+            char aes_str[40];
+            sprintf(aes_str, "AES: %u cyc/block", aes_cycles);
+            vga_puts_at(aes_str, 21, 40, VGA_WHITE | (VGA_BLACK << 4));
+        }
+
+        if (hwcrypto_has_shani()) {
+            u32 sha_cycles = hwcrypto_benchmark_sha256(1000);
+            char sha_str[40];
+            sprintf(sha_str, "SHA-256: %u cyc/hash", sha_cycles);
+            vga_puts_at(sha_str, 22, 40, VGA_WHITE | (VGA_BLACK << 4));
+        }
+
+        /* Show RNG status */
+        if (hwcrypto_has_rdrand()) {
+            u32 random = hwcrypto_rdrand32();
+            char rng_str[40];
+            sprintf(rng_str, "RDRAND: %08X", random);
+            vga_puts_at(rng_str, 23, 40, VGA_YELLOW | (VGA_BLACK << 4));
+        }
+
+        /* Show stats */
+        const hwcrypto_stats_t* stats = hwcrypto_get_stats();
+        if (stats->aes_ops_count > 0) {
+            char stats_str[40];
+            sprintf(stats_str, "AES ops: %u RNG: %u", stats->aes_ops_count, stats->rng_requests);
+            vga_puts_at(stats_str, 24, 40, VGA_GRAY | (VGA_BLACK << 4));
+        }
+    } else {
+        vga_puts_at("Hardware crypto not supported", 19, 40, VGA_RED | (VGA_BLACK << 4));
+    }
+
+    while (1) {
+        timer_delay(3000);
+    }
+}
+
 static void system_info_task(void) {
     while (1) {
         /* Update system stats */
@@ -3112,7 +3171,8 @@ void x86_pc_demo_init(void) {
     task_create(cpu_instruction_ext_demo_task, 72, 256);
     task_create(system_mgmt_mode_demo_task, 73, 256);
     task_create(thermal_mgmt_demo_task, 74, 256);
-    task_create(system_info_task, 75, 256);
+    task_create(hwcrypto_demo_task, 75, 256);
+    task_create(system_info_task, 76, 256);
 }
 
 /* Simple string functions */

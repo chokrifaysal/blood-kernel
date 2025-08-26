@@ -425,6 +425,16 @@ qemu-system-x86_64 -kernel build/kernel.bin
 - Tile configuration for AMX
 - Feature usage tracking and statistics
 
+### Hardware Cryptography
+- AES-NI hardware acceleration for AES encryption/decryption
+- SHA-NI extensions for SHA-1 and SHA-256 acceleration
+- PCLMULQDQ carry-less multiplication for GCM/GHASH
+- RDRAND/RDSEED hardware random number generation
+- GFNI Galois Field instructions for crypto operations
+- VAES/VPCLMULQDQ vector crypto for AVX-512
+- Performance monitoring and benchmarking
+- Self-test validation and capability detection
+
 ### CPU Security Features
 - Intel CET (Control Flow Enforcement Technology)
 - Shadow stack and indirect branch tracking
