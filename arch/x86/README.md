@@ -446,6 +446,17 @@ qemu-system-x86_64 -kernel build/kernel.bin
 - DRAM training, calibration, and parameter optimization
 - Memory interleaving and performance tuning
 
+### Hardware Transactional Memory
+- Intel TSX (Transactional Synchronization Extensions) support
+- RTM (Restricted Transactional Memory) with xbegin/xend/xabort
+- HLE (Hardware Lock Elision) with XACQUIRE/XRELEASE prefixes
+- Transaction abort handling and retry logic with adaptive backoff
+- Nested transaction support up to 7 levels deep
+- Transaction conflict detection and capacity monitoring
+- Performance benchmarking and statistics collection
+- Hardware lock elision for spinlocks and critical sections
+- Fallback mechanisms for non-TSX systems and abort scenarios
+
 ### CPU Security Features
 - Intel CET (Control Flow Enforcement Technology)
 - Shadow stack and indirect branch tracking

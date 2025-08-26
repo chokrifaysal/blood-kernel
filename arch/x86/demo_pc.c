@@ -79,6 +79,7 @@
 #include "drivers/thermal_mgmt.h"
 #include "drivers/hwcrypto.h"
 #include "drivers/memory_subsys.h"
+#include "drivers/hw_transactional.h"
 
 extern void timer_delay(u32 ms);
 
@@ -3149,6 +3150,69 @@ static void memory_subsys_demo_task(void) {
     }
 }
 
+static void hw_transactional_demo_task(void) {
+    hw_transactional_init();
+
+    vga_set_cursor(16, 0);
+    vga_puts("Hardware Transactional:\n");
+
+    if (hw_transactional_is_supported()) {
+        char caps_str[40] = "Support: ";
+        if (hw_transactional_has_rtm()) strcat(caps_str, "RTM ");
+        if (hw_transactional_has_hle()) strcat(caps_str, "HLE");
+        vga_puts_at(caps_str, 17, 0, VGA_CYAN | (VGA_BLACK << 4));
+
+        /* Run self-test */
+        u8 self_test = hw_transactional_self_test();
+        char test_str[40];
+        sprintf(test_str, "Self-test: %s", self_test ? "PASS" : "FAIL");
+        vga_puts_at(test_str, 18, 0, self_test ? VGA_GREEN : VGA_RED | (VGA_BLACK << 4));
+
+        /* Show RTM benchmarks */
+        if (hw_transactional_has_rtm()) {
+            u32 rtm_cycles = hw_transactional_benchmark_simple_tx(1000);
+            char rtm_str[40];
+            sprintf(rtm_str, "RTM: %u cyc/tx", rtm_cycles);
+            vga_puts_at(rtm_str, 19, 0, VGA_WHITE | (VGA_BLACK << 4));
+        }
+
+        /* Show HLE benchmarks */
+        if (hw_transactional_has_hle()) {
+            u32 hle_cycles = hw_transactional_benchmark_hle_lock(1000);
+            char hle_str[40];
+            sprintf(hle_str, "HLE: %u cyc/lock", hle_cycles);
+            vga_puts_at(hle_str, 20, 0, VGA_WHITE | (VGA_BLACK << 4));
+        }
+
+        /* Show transaction statistics */
+        const tsx_stats_t* stats = hw_transactional_get_stats();
+        if (stats->total_attempts > 0) {
+            u32 success_rate = hw_transactional_get_success_rate();
+            char stats_str[40];
+            sprintf(stats_str, "Success: %u%% Attempts: %u", success_rate, stats->total_attempts);
+            vga_puts_at(stats_str, 21, 0, VGA_LBLUE | (VGA_BLACK << 4));
+
+            char abort_str[40];
+            sprintf(abort_str, "Aborts: C:%u Cap:%u Dbg:%u", 
+                    stats->conflict_aborts, stats->capacity_aborts, stats->debug_aborts);
+            vga_puts_at(abort_str, 22, 0, VGA_YELLOW | (VGA_BLACK << 4));
+        }
+
+        /* Show nested transaction support */
+        u32 max_depth = hw_transactional_get_max_nest_depth();
+        char depth_str[40];
+        sprintf(depth_str, "Max nest depth: %u", max_depth);
+        vga_puts_at(depth_str, 23, 0, VGA_MAGENTA | (VGA_BLACK << 4));
+
+    } else {
+        vga_puts_at("Hardware transactional not supported", 17, 0, VGA_RED | (VGA_BLACK << 4));
+    }
+
+    while (1) {
+        timer_delay(3500);
+    }
+}
+
 static void system_info_task(void) {
     while (1) {
         /* Update system stats */
@@ -3244,7 +3308,8 @@ void x86_pc_demo_init(void) {
     task_create(thermal_mgmt_demo_task, 74, 256);
     task_create(hwcrypto_demo_task, 75, 256);
     task_create(memory_subsys_demo_task, 76, 256);
-    task_create(system_info_task, 77, 256);
+    task_create(hw_transactional_demo_task, 77, 256);
+    task_create(system_info_task, 78, 256);
 }
 
 /* Simple string functions */

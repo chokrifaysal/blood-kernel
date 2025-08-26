@@ -85,6 +85,7 @@ void system_mgmt_mode_init(void);
 void thermal_mgmt_init(void);
 void hwcrypto_init(void);
 void memory_subsys_init(void);
+void hw_transactional_init(void);
 void x86_pc_demo_init(void);
 
 void clock_init(void) {
@@ -259,6 +260,9 @@ void clock_init(void) {
 
     /* Initialize memory subsystem */
     memory_subsys_init();
+
+    /* Initialize hardware transactional memory */
+    hw_transactional_init();
 
     /* Initialize ACPI */
     acpi_init();
