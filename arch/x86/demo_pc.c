@@ -78,6 +78,7 @@
 #include "drivers/system_mgmt_mode.h"
 #include "drivers/thermal_mgmt.h"
 #include "drivers/hwcrypto.h"
+#include "drivers/memory_subsys.h"
 
 extern void timer_delay(u32 ms);
 
@@ -3078,6 +3079,76 @@ static void hwcrypto_demo_task(void) {
     }
 }
 
+static void memory_subsys_demo_task(void) {
+    memory_subsys_init();
+
+    vga_set_cursor(18, 0);
+    vga_puts("Memory Subsystem:\n");
+
+    if (memory_subsys_is_supported()) {
+        const memory_config_t* config = memory_subsys_get_config();
+        
+        char ctrl_str[40];
+        sprintf(ctrl_str, "Controller: %s", memory_subsys_get_controller_name(0));
+        vga_puts_at(ctrl_str, 19, 0, VGA_CYAN | (VGA_BLACK << 4));
+
+        char dram_str[40];
+        sprintf(dram_str, "DRAM: %s %uMHz Ch:%u", 
+                memory_subsys_get_dram_type_name(config->dram_type),
+                config->frequency, config->channels);
+        vga_puts_at(dram_str, 20, 0, VGA_WHITE | (VGA_BLACK << 4));
+
+        /* Show ECC status */
+        if (memory_subsys_is_ecc_enabled()) {
+            const ecc_status_t* ecc = memory_subsys_get_ecc_status();
+            char ecc_str[40];
+            sprintf(ecc_str, "ECC: Enabled Errs:%u/%u", 
+                    ecc->correctable_errors, ecc->uncorrectable_errors);
+            vga_puts_at(ecc_str, 21, 0, VGA_GREEN | (VGA_BLACK << 4));
+        } else {
+            vga_puts_at("ECC: Disabled", 21, 0, VGA_YELLOW | (VGA_BLACK << 4));
+        }
+
+        /* Show bandwidth monitoring */
+        if (memory_subsys_is_mbm_supported()) {
+            memory_subsys_start_mbm_monitoring(0, MBM_EVENT_TOTAL);
+            const memory_bandwidth_t* bw = memory_subsys_get_bandwidth_stats(0);
+            char bw_str[40];
+            sprintf(bw_str, "BW: %uMB/s Util:%u%%", 
+                    (u32)(bw->total_bandwidth / 1048576), bw->utilization_percent);
+            vga_puts_at(bw_str, 22, 0, VGA_LBLUE | (VGA_BLACK << 4));
+        }
+
+        /* Show cache monitoring */
+        if (memory_subsys_is_cmt_supported()) {
+            memory_subsys_start_cmt_monitoring(0);
+            const cache_monitoring_t* cache = memory_subsys_get_cache_stats(0);
+            char cache_str[40];
+            sprintf(cache_str, "LLC: %uKB Evictions:%u", 
+                    cache->llc_occupancy / 1024, cache->evictions);
+            vga_puts_at(cache_str, 23, 0, VGA_MAGENTA | (VGA_BLACK << 4));
+        }
+
+        /* Show prefetch status */
+        if (memory_subsys_is_prefetch_supported()) {
+            vga_puts_at("Prefetch: HW Enabled", 24, 0, VGA_GREEN | (VGA_BLACK << 4));
+        }
+
+        /* Run self-test */
+        u8 self_test = memory_subsys_self_test();
+        char test_str[40];
+        sprintf(test_str, "Self-test: %s", self_test ? "PASS" : "FAIL");
+        vga_puts_at(test_str, 25, 0, self_test ? VGA_GREEN : VGA_RED | (VGA_BLACK << 4));
+
+    } else {
+        vga_puts_at("Memory subsystem not supported", 19, 0, VGA_RED | (VGA_BLACK << 4));
+    }
+
+    while (1) {
+        timer_delay(4000);
+    }
+}
+
 static void system_info_task(void) {
     while (1) {
         /* Update system stats */
@@ -3172,7 +3243,8 @@ void x86_pc_demo_init(void) {
     task_create(system_mgmt_mode_demo_task, 73, 256);
     task_create(thermal_mgmt_demo_task, 74, 256);
     task_create(hwcrypto_demo_task, 75, 256);
-    task_create(system_info_task, 76, 256);
+    task_create(memory_subsys_demo_task, 76, 256);
+    task_create(system_info_task, 77, 256);
 }
 
 /* Simple string functions */

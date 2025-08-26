@@ -435,6 +435,17 @@ qemu-system-x86_64 -kernel build/kernel.bin
 - Performance monitoring and benchmarking
 - Self-test validation and capability detection
 
+### Memory Subsystem Control
+- Memory controller direct access and configuration (Intel IMC/AMD UMC)
+- DRAM timing control and frequency scaling
+- ECC error detection, correction, and scrubbing control
+- Memory bandwidth monitoring (MBM) with Intel RDT
+- Cache monitoring technology (CMT) for LLC occupancy
+- Hardware prefetcher control and optimization
+- Memory thermal management and throttling detection
+- DRAM training, calibration, and parameter optimization
+- Memory interleaving and performance tuning
+
 ### CPU Security Features
 - Intel CET (Control Flow Enforcement Technology)
 - Shadow stack and indirect branch tracking
